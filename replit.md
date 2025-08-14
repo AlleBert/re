@@ -60,12 +60,20 @@ Trading Features: Added sell functionality for partial or complete position liqu
 - **Radix UI**: Accessible component primitives
 - **Lucide React**: Icon library
 - **Class Variance Authority**: Component variant management
+- **Recharts**: Advanced charting library for live market data visualization
 
 ### Data & Forms
 - **Zod**: Schema validation and type inference
 - **React Hook Form**: Form state management and validation
 - **TanStack Query**: Server state management
 - **Date-fns**: Date manipulation utilities
+
+### Financial Data Integration
+- **Alpha Vantage API**: Real-time stock market data (500 requests/day free tier)
+- **Yahoo Finance API**: Unofficial but comprehensive market data access
+- **Finnhub API**: Professional-grade financial data with real-time quotes
+- **Financial Modeling Prep**: Fundamental analysis and financial statements
+- **Multiple Provider Fallback**: Automatic failover between data sources for reliability
 
 ### Backend (Ready for Extension)
 - **Express.js**: Web server framework

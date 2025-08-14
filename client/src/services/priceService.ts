@@ -1,14 +1,26 @@
-// Real-time price update service for Fineco investments
+import { FinancialDataService } from './financialDataService';
+
+// Real-time price update service integrated with financial data providers
 export class PriceService {
   private static updateInterval: NodeJS.Timeout | null = null;
   private static readonly UPDATE_INTERVAL = 60000; // Update every minute
+  
+  // Get real price updates from financial data service
+  static async getRealPriceUpdate(symbol: string, currentPrice: number): Promise<number> {
+    try {
+      const quote = await FinancialDataService.getRealTimeQuote(symbol);
+      if (quote && quote.price > 0) {
+        return quote.price;
+      }
+    } catch (error) {
+      console.warn(`Failed to get real price for ${symbol}, using simulated data:`, error);
+    }
+    
+    // Fallback to realistic simulation if API fails
+    return this.mockPriceUpdate(currentPrice, symbol);
+  }
 
-  // Mock price fluctuation for demonstration
-  // In production, this would call real APIs like:
-  // - Yahoo Finance API
-  // - Alpha Vantage API
-  // - Fineco's internal API
-  // - IEX Cloud API
+  // Mock price fluctuation for demonstration when APIs are unavailable
   static mockPriceUpdate(currentPrice: number, symbol: string): number {
     // Create realistic price movements
     const volatility = this.getVolatility(symbol);
@@ -30,16 +42,25 @@ export class PriceService {
   static startPriceUpdates(onUpdate: (updates: Array<{id: string, price: number}>) => void) {
     if (this.updateInterval) return;
 
-    this.updateInterval = setInterval(() => {
-      // Get investments from localStorage
-      const investments = JSON.parse(localStorage.getItem('investment-tracker-investments') || '[]');
-      
-      const updates = investments.map((investment: any) => ({
-        id: investment.id,
-        price: this.mockPriceUpdate(investment.currentPrice, investment.symbol)
-      }));
+    this.updateInterval = setInterval(async () => {
+      try {
+        // Get investments from localStorage
+        const investments = JSON.parse(localStorage.getItem('investment-tracker-investments') || '[]');
+        
+        const updates = await Promise.all(
+          investments.map(async (investment: any) => {
+            const newPrice = await this.getRealPriceUpdate(investment.currentPrice, investment.symbol);
+            return {
+              id: investment.id,
+              price: newPrice
+            };
+          })
+        );
 
-      onUpdate(updates);
+        onUpdate(updates);
+      } catch (error) {
+        console.error('Error in price updates:', error);
+      }
     }, this.UPDATE_INTERVAL);
   }
 
@@ -50,39 +71,39 @@ export class PriceService {
     }
   }
 
-  // Simulate real API call for new investment search
-  static async searchInvestment(query: string): Promise<any[]> {
-    // This would be replaced with real API calls to:
-    // - Fineco's investment search API
-    // - Financial data providers
-    
-    // Mock delay to simulate API call
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    return []; // Would return real search results
+  // Real-time price monitoring for specific investments
+  static async monitorInvestment(symbol: string, onPriceChange: (newPrice: number) => void) {
+    const monitorInterval = setInterval(async () => {
+      try {
+        const quote = await FinancialDataService.getRealTimeQuote(symbol);
+        if (quote && quote.price > 0) {
+          onPriceChange(quote.price);
+        }
+      } catch (error) {
+        console.warn(`Failed to monitor ${symbol}:`, error);
+      }
+    }, 30000); // Check every 30 seconds for more frequent updates
+
+    return () => clearInterval(monitorInterval);
   }
 
-  // Get real-time quote for specific ISIN/symbol
-  static async getRealTimeQuote(isin: string, symbol: string): Promise<{
-    price: number,
-    change: number,
-    changePercent: number,
-    volume: number,
-    lastUpdate: string
-  } | null> {
-    try {
-      // In production, implement calls to:
-      // - Yahoo Finance: https://query1.finance.yahoo.com/v8/finance/chart/SYMBOL
-      // - Alpha Vantage: https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=SYMBOL
-      // - IEX Cloud: https://cloud.iexapis.com/stable/stock/SYMBOL/quote
-      
-      // Mock implementation
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      return null; // Would return real market data
-    } catch (error) {
-      console.error('Error fetching real-time quote:', error);
-      return null;
-    }
+  // Batch update prices for multiple investments
+  static async batchUpdatePrices(symbols: string[]): Promise<Map<string, number>> {
+    const priceUpdates = new Map<string, number>();
+    
+    await Promise.all(
+      symbols.map(async (symbol) => {
+        try {
+          const quote = await FinancialDataService.getRealTimeQuote(symbol);
+          if (quote && quote.price > 0) {
+            priceUpdates.set(symbol, quote.price);
+          }
+        } catch (error) {
+          console.warn(`Failed to update price for ${symbol}:`, error);
+        }
+      })
+    );
+
+    return priceUpdates;
   }
 }

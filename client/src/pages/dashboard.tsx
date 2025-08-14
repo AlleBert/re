@@ -12,8 +12,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { InvestmentForm } from "@/components/investment-form";
 import { SellInvestmentForm } from "@/components/sell-investment-form";
 import { PortfolioChart } from "@/components/portfolio-chart";
+import { LiveChart } from "@/components/live-chart";
 import { LocalStorageService } from "@/lib/storage";
 import { PriceService } from "@/services/priceService";
+import { FinancialDataService } from "@/services/financialDataService";
 import { Investment, Transaction, PortfolioSummary } from "@shared/schema";
 import { User as UserType } from "@/lib/types";
 
@@ -45,6 +47,27 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         });
         loadData();
       });
+
+      // Also start real-time price updates using the financial data service
+      const interval = setInterval(async () => {
+        const currentInvestments = LocalStorageService.getInvestments();
+        for (const investment of currentInvestments) {
+          try {
+            const quote = await FinancialDataService.getRealTimeQuote(investment.symbol);
+            if (quote && quote.price !== investment.currentPrice) {
+              LocalStorageService.updateInvestmentPrice(investment.id, quote.price, 'Market Update');
+            }
+          } catch (error) {
+            console.warn(`Failed to update price for ${investment.symbol}:`, error);
+          }
+        }
+        loadData();
+      }, 60000); // Update every minute
+
+      return () => {
+        PriceService.stopPriceUpdates();
+        clearInterval(interval);
+      };
     }
 
     // Cleanup on unmount
@@ -183,10 +206,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="investments">Investments</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Panoramica</TabsTrigger>
+            <TabsTrigger value="charts">Grafici Live</TabsTrigger>
+            <TabsTrigger value="investments">Investimenti</TabsTrigger>
+            <TabsTrigger value="history">Storico</TabsTrigger>
           </TabsList>
 
           {/* Overview Section */}
@@ -358,17 +382,26 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             </div>
           </TabsContent>
 
+          {/* Live Charts Section */}
+          <TabsContent value="charts" className="space-y-6">
+            <LiveChart 
+              investments={investments} 
+              portfolio={portfolio} 
+              currentUser={user} 
+            />
+          </TabsContent>
+
           {/* Investments Section */}
           <TabsContent value="investments" className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Investment Portfolio</h2>
-                <p className="text-slate-600 dark:text-slate-400">Manage and track your investments</p>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Portfolio Investimenti</h2>
+                <p className="text-slate-600 dark:text-slate-400">Gestisci e monitora i tuoi investimenti</p>
               </div>
               {user.isAdmin && (
                 <Button onClick={() => setShowInvestmentForm(true)}>
                   <Plus className="mr-2" size={16} />
-                  Add Investment
+                  Aggiungi Investimento
                 </Button>
               )}
             </div>
@@ -494,8 +527,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           <TabsContent value="history" className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Transaction History</h2>
-                <p className="text-slate-600 dark:text-slate-400">View all investment transactions</p>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Storico Transazioni</h2>
+                <p className="text-slate-600 dark:text-slate-400">Visualizza tutte le transazioni di investimento</p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
@@ -504,10 +537,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="buy">Buy</SelectItem>
-                    <SelectItem value="sell">Sell</SelectItem>
-                    <SelectItem value="price_update">Price Update</SelectItem>
+                    <SelectItem value="all">Tutti i Tipi</SelectItem>
+                    <SelectItem value="buy">Acquisto</SelectItem>
+                    <SelectItem value="sell">Vendita</SelectItem>
+                    <SelectItem value="price_update">Aggiornamento Prezzo</SelectItem>
                   </SelectContent>
                 </Select>
                 
@@ -516,10 +549,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="30days">Last 30 days</SelectItem>
-                    <SelectItem value="3months">Last 3 months</SelectItem>
-                    <SelectItem value="1year">Last year</SelectItem>
-                    <SelectItem value="all">All time</SelectItem>
+                    <SelectItem value="30days">Ultimi 30 giorni</SelectItem>
+                    <SelectItem value="3months">Ultimi 3 mesi</SelectItem>
+                    <SelectItem value="1year">Ultimo anno</SelectItem>
+                    <SelectItem value="all">Tutto il periodo</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

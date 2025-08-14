@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { User, Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, PieChart } from "lucide-react";
+import { User, Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, PieChart, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,10 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { useTheme } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { InvestmentForm } from "@/components/investment-form";
+import { SellInvestmentForm } from "@/components/sell-investment-form";
 import { PortfolioChart } from "@/components/portfolio-chart";
 import { LocalStorageService } from "@/lib/storage";
+import { PriceService } from "@/services/priceService";
 import { Investment, Transaction, PortfolioSummary } from "@shared/schema";
 import { User as UserType } from "@/lib/types";
 
@@ -21,11 +23,12 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ user, onLogout }: DashboardProps) {
-  const { theme, setTheme } = useTheme();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [showInvestmentForm, setShowInvestmentForm] = useState(false);
+  const [showSellForm, setShowSellForm] = useState(false);
+  const [sellInvestment, setSellInvestment] = useState<Investment | null>(null);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [newPrice, setNewPrice] = useState("");
   const [historyFilter, setHistoryFilter] = useState("all");
@@ -33,7 +36,22 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   useEffect(() => {
     loadData();
-  }, []);
+    
+    // Start real-time price updates for admin users
+    if (user.isAdmin) {
+      PriceService.startPriceUpdates((updates) => {
+        updates.forEach(update => {
+          LocalStorageService.updateInvestmentPrice(update.id, update.price, 'System');
+        });
+        loadData();
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      PriceService.stopPriceUpdates();
+    };
+  }, [user.isAdmin]);
 
   const loadData = () => {
     const investmentData = LocalStorageService.getInvestments();
@@ -69,6 +87,18 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       LocalStorageService.deleteInvestment(investmentId);
       loadData();
     }
+  };
+
+  const handleSellInvestment = (investment: Investment) => {
+    if (!user.isAdmin) return;
+    setSellInvestment(investment);
+    setShowSellForm(true);
+  };
+
+  const handleSellSuccess = () => {
+    setShowSellForm(false);
+    setSellInvestment(null);
+    loadData();
   };
 
   const formatCurrency = (amount: number) => {
@@ -126,9 +156,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     }
   });
 
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
+
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -143,13 +171,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               </Badge>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="icon" onClick={toggleTheme}>
-                {theme === "dark" ? (
-                  <i className="fas fa-sun text-yellow-500" />
-                ) : (
-                  <i className="fas fa-moon text-blue-400" />
-                )}
-              </Button>
+              <ThemeToggle />
               <Button variant="outline" onClick={onLogout}>
                 <i className="fas fa-sign-out-alt mr-2" />
                 Logout
@@ -444,7 +466,16 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                onClick={() => handleSellInvestment(investment)}
+                                className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300"
+                              >
+                                <Minus size={14} />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 onClick={() => handleDeleteInvestment(investment.id)}
+                                className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
                               >
                                 <Trash2 size={14} />
                               </Button>
@@ -546,6 +577,14 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         open={showInvestmentForm}
         onClose={() => setShowInvestmentForm(false)}
         onSuccess={loadData}
+      />
+
+      {/* Sell Investment Form Modal */}
+      <SellInvestmentForm
+        open={showSellForm}
+        onClose={() => setShowSellForm(false)}
+        onSuccess={handleSellSuccess}
+        investment={sellInvestment}
       />
     </div>
   );

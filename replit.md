@@ -7,6 +7,9 @@ This is a minimalist web application for shared investment portfolio management 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Theme: Theme toggle switch implemented for dark/light mode switching.
+Investment Management: Integrated Fineco platform investment search with ISIN validation and real-time price updates.
+Trading Features: Added sell functionality for partial or complete position liquidation.
 
 ## System Architecture
 
@@ -27,13 +30,17 @@ Preferred communication style: Simple, everyday language.
 - **Primary Storage**: LocalStorage for client-side persistence
 - **Backup Architecture**: Express.js server with in-memory storage ready for database integration
 - **Schema**: Zod validation schemas for type safety and data validation
-- **Data Models**: Investments, Transactions, and Portfolio Summary entities
+- **Data Models**: Investments (with ISIN, market fields), Transactions, and Portfolio Summary entities
+- **Real-time Updates**: Automatic price updates with configurable intervals
+- **Investment Search**: Integration with Fineco platform for real investment data
 
 ### UI/UX Design
-- **Theme System**: Dual light/dark theme support with CSS variables
+- **Theme System**: Dual light/dark theme support with switch toggle component
 - **Responsive Design**: Mobile-first approach using Tailwind breakpoints
-- **Component Library**: Comprehensive UI components (forms, tables, charts, dialogs)
-- **User Experience**: Intuitive dashboard with portfolio overview and detailed investment tracking
+- **Component Library**: Comprehensive UI components (forms, tables, charts, dialogs, switches)
+- **User Experience**: Intuitive dashboard with portfolio overview, investment search, and trading functionality
+- **Investment Management**: Tabbed interface for searching Fineco investments vs manual entry
+- **Trading Interface**: Sell functionality with quantity validation and profit/loss calculation
 
 ### Development Architecture
 - **Monorepo Structure**: Shared schema between client and server

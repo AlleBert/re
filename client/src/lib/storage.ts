@@ -73,6 +73,7 @@ export class LocalStorageService {
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      quantity: Math.max(0, investment.quantity), // Ensure non-negative quantity
     };
     
     investments.push(newInvestment);

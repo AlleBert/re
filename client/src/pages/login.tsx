@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useTheme } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useState } from "react";
 
 interface LoginProps {
@@ -11,7 +11,6 @@ interface LoginProps {
 }
 
 export default function Login({ onLogin }: LoginProps) {
-  const { theme, setTheme } = useTheme();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState(false);
@@ -41,28 +40,13 @@ export default function Login({ onLogin }: LoginProps) {
     }
   };
 
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-900">
       <Card className="w-full max-w-md">
         <CardContent className="p-8">
           {/* Theme Toggle */}
           <div className="flex justify-end mb-6">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleTheme}
-              className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600"
-            >
-              {theme === "dark" ? (
-                <i className="fas fa-sun text-yellow-500" />
-              ) : (
-                <i className="fas fa-moon text-blue-400" />
-              )}
-            </Button>
+            <ThemeToggle />
           </div>
 
           <div className="text-center mb-8">

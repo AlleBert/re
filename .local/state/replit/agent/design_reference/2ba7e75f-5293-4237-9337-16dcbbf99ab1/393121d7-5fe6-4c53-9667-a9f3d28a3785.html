@@ -1,0 +1,801 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Tracker - Shared Portfolio Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        primary: '#2563EB',
+                        secondary: '#64748B',
+                        success: '#059669',
+                        danger: '#DC2626'
+                    }
+                }
+            },
+            darkMode: 'class'
+        };
+    </script>
+</head>
+<body class="font-inter bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+    <!-- @COMPONENT: App [main application container] -->
+    <div id="app" class="min-h-screen">
+        
+        <!-- @COMPONENT: LoginScreen [initial user selection] -->
+        <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 w-full max-w-md">
+                <!-- Theme Toggle -->
+                <div class="flex justify-end mb-6">
+                    <button onclick="toggleTheme()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                        <i class="fas fa-sun dark:hidden text-yellow-500"></i>
+                        <i class="fas fa-moon hidden dark:block text-blue-400"></i>
+                    </button>
+                </div>
+                
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Investment Tracker</h1>
+                    <p class="text-slate-600 dark:text-slate-400">Select your account to continue</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Ali User Card -->
+                    <div onclick="loginAsAli()" class="cursor-pointer group bg-slate-50 dark:bg-slate-700 rounded-xl p-6 hover:bg-slate-100 dark:hover:bg-slate-600 transition-all duration-200 border-2 border-transparent hover:border-primary">
+                        <div class="flex items-center space-x-4">
+                            <!-- Profile image placeholder -->
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-white text-lg"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-slate-900 dark:text-white">Ali</h3>
+                                <p class="text-sm text-slate-600 dark:text-slate-400">Viewer Access</p>
+                            </div>
+                            <i class="fas fa-arrow-right text-slate-400 group-hover:text-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Alle User Card -->
+                    <div onclick="showPasswordPrompt()" class="cursor-pointer group bg-slate-50 dark:bg-slate-700 rounded-xl p-6 hover:bg-slate-100 dark:hover:bg-slate-600 transition-all duration-200 border-2 border-transparent hover:border-primary">
+                        <div class="flex items-center space-x-4">
+                            <!-- Profile image placeholder -->
+                            <div class="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user-crown text-white text-lg"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-slate-900 dark:text-white">Alle</h3>
+                                <p class="text-sm text-slate-600 dark:text-slate-400">Admin Access</p>
+                            </div>
+                            <i class="fas fa-lock text-slate-400 group-hover:text-primary transition-colors"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: LoginScreen -->
+        
+        <!-- @COMPONENT: PasswordModal [admin authentication] -->
+        <div id="passwordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm">
+                <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Admin Authentication</h3>
+                <input type="password" id="passwordInput" placeholder="Enter password" 
+                       class="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none" 
+                       onkeypress="handlePasswordKeypress(event)">
+                <div class="flex space-x-3 mt-4">
+                    <button onclick="hidePasswordPrompt()" class="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 transition-colors">Cancel</button>
+                    <button onclick="verifyPassword()" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">Login</button>
+                </div>
+                <div id="passwordError" class="hidden mt-3 text-sm text-danger">Incorrect password. Please try again.</div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: PasswordModal -->
+        
+        <!-- @COMPONENT: Dashboard [main application interface] -->
+        <div id="dashboard" class="hidden min-h-screen">
+            <!-- Navigation Header -->
+            <nav class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center h-16">
+                        <div class="flex items-center space-x-4">
+                            <h1 class="text-xl font-bold text-slate-900 dark:text-white">Investment Tracker</h1>
+                            <span id="userRole" class="px-3 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full" data-bind="currentUser.role">Viewer</span>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <!-- Navigation Tabs -->
+                            <div class="hidden md:flex space-x-1">
+                                <button onclick="showSection('overview')" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg transition-colors" data-section="overview">Overview</button>
+                                <button onclick="showSection('investments')" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg transition-colors" data-section="investments">Investments</button>
+                                <button onclick="showSection('history')" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg transition-colors" data-section="history">History</button>
+                            </div>
+                            
+                            <button onclick="toggleTheme()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                                <i class="fas fa-sun dark:hidden text-yellow-500"></i>
+                                <i class="fas fa-moon hidden dark:block text-blue-400"></i>
+                            </button>
+                            
+                            <button onclick="logout()" class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mobile Navigation -->
+                <div class="md:hidden border-t border-slate-200 dark:border-slate-700">
+                    <div class="flex">
+                        <button onclick="showSection('overview')" class="nav-tab-mobile flex-1 py-3 text-sm font-medium text-center transition-colors" data-section="overview">Overview</button>
+                        <button onclick="showSection('investments')" class="nav-tab-mobile flex-1 py-3 text-sm font-medium text-center transition-colors" data-section="investments">Investments</button>
+                        <button onclick="showSection('history')" class="nav-tab-mobile flex-1 py-3 text-sm font-medium text-center transition-colors" data-section="history">History</button>
+                    </div>
+                </div>
+            </nav>
+            
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                
+                <!-- @COMPONENT: OverviewSection [financial summary dashboard] -->
+                <section id="overviewSection" class="space-y-6">
+                    <!-- Portfolio Summary Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400">Total Portfolio</p>
+                                    <p class="text-2xl font-bold text-slate-900 dark:text-white" data-bind="portfolio.totalValue">€52,450.00</p>
+                                </div>
+                                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-chart-line text-blue-600 dark:text-blue-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400">Total Gain/Loss</p>
+                                    <p class="text-2xl font-bold text-success" data-bind="portfolio.totalGainLoss">+€3,420.50</p>
+                                </div>
+                                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-trending-up text-green-600 dark:text-green-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400">Alle's Share (75%)</p>
+                                    <p class="text-2xl font-bold text-slate-900 dark:text-white" data-bind="portfolio.alleShare">€39,337.50</p>
+                                </div>
+                                <div class="w-10 h-10 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-user-crown text-emerald-600 dark:text-emerald-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400">Ali's Share (25%)</p>
+                                    <p class="text-2xl font-bold text-slate-900 dark:text-white" data-bind="portfolio.aliShare">€13,112.50</p>
+                                </div>
+                                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-user text-blue-600 dark:text-blue-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Portfolio Performance Chart -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Portfolio Performance</h3>
+                        <div class="h-64">
+                            <canvas id="portfolioChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Recent Activity</h3>
+                            <div class="space-y-3">
+                                <!-- @MAP: recentActivities.map(activity => ( -->
+                                <div class="flex items-center justify-between py-2" data-mock="true">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-plus text-blue-600 dark:text-blue-400 text-xs"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-slate-900 dark:text-white">Added AAPL</p>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400">2 hours ago</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-sm text-slate-600 dark:text-slate-400">€5,000</span>
+                                </div>
+                                <!-- @END_MAP )) -->
+                                
+                                <div class="flex items-center justify-between py-2" data-mock="true">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-edit text-green-600 dark:text-green-400 text-xs"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-slate-900 dark:text-white">Updated TSLA price</p>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400">1 day ago</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-sm text-slate-600 dark:text-slate-400">€245.50</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                            <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Asset Allocation</h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <span class="text-sm text-slate-600 dark:text-slate-400">Stocks</span>
+                                    <span class="text-sm font-medium text-slate-900 dark:text-white">65%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 65%"></div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <span class="text-sm text-slate-600 dark:text-slate-400">ETFs</span>
+                                    <span class="text-sm font-medium text-slate-900 dark:text-white">25%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                    <div class="bg-emerald-600 h-2 rounded-full" style="width: 25%"></div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between" data-mock="true">
+                                    <span class="text-sm text-slate-600 dark:text-slate-400">Crypto</span>
+                                    <span class="text-sm font-medium text-slate-900 dark:text-white">10%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                    <div class="bg-orange-600 h-2 rounded-full" style="width: 10%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <!-- @END_COMPONENT: OverviewSection -->
+                
+                <!-- @COMPONENT: InvestmentsSection [investment management] -->
+                <section id="investmentsSection" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Investment Portfolio</h2>
+                            <p class="text-slate-600 dark:text-slate-400">Manage and track your investments</p>
+                        </div>
+                        <button id="addInvestmentBtn" onclick="showAddInvestmentModal()" class="hidden px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors" data-admin-only="true">
+                            <i class="fas fa-plus mr-2"></i>Add Investment
+                        </button>
+                    </div>
+                    
+                    <!-- Investments Table -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-slate-50 dark:bg-slate-900">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Asset</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Quantity</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg Price</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Current Price</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Value</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Gain/Loss</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" data-admin-only="true">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 dark:divide-slate-700" id="investmentsTableBody">
+                                    <!-- @MAP: investments.map(investment => ( -->
+                                    <tr data-mock="true">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mr-3">
+                                                    <span class="text-blue-600 dark:text-blue-400 font-semibold text-sm">AAPL</span>
+                                                </div>
+                                                <div>
+                                                    <div class="text-sm font-medium text-slate-900 dark:text-white">Apple Inc.</div>
+                                                    <div class="text-sm text-slate-500 dark:text-slate-400">Technology</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white" data-bind="investment.quantity">25</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white" data-bind="investment.avgPrice">€175.50</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-slate-900 dark:text-white" data-bind="investment.currentPrice">€182.30</span>
+                                            <button class="admin-only hidden ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onclick="editPrice(this)" data-admin-only="true">
+                                                <i class="fas fa-edit text-xs"></i>
+                                            </button>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white" data-bind="investment.totalValue">€4,557.50</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-success" data-bind="investment.gainLoss">+€170.00 (+3.87%)</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium admin-only hidden" data-admin-only="true">
+                                            <button class="text-primary hover:text-blue-700 mr-3" onclick="editInvestment(this)">Edit</button>
+                                            <button class="text-danger hover:text-red-700" onclick="deleteInvestment(this)">Delete</button>
+                                        </td>
+                                    </tr>
+                                    <!-- @END_MAP )) -->
+                                    
+                                    <tr data-mock="true">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center mr-3">
+                                                    <span class="text-red-600 dark:text-red-400 font-semibold text-sm">TSLA</span>
+                                                </div>
+                                                <div>
+                                                    <div class="text-sm font-medium text-slate-900 dark:text-white">Tesla Inc.</div>
+                                                    <div class="text-sm text-slate-500 dark:text-slate-400">Automotive</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">15</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">€250.00</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-slate-900 dark:text-white">€245.50</span>
+                                            <button class="admin-only hidden ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onclick="editPrice(this)" data-admin-only="true">
+                                                <i class="fas fa-edit text-xs"></i>
+                                            </button>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">€3,682.50</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-danger">-€67.50 (-1.80%)</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium admin-only hidden" data-admin-only="true">
+                                            <button class="text-primary hover:text-blue-700 mr-3" onclick="editInvestment(this)">Edit</button>
+                                            <button class="text-danger hover:text-red-700" onclick="deleteInvestment(this)">Delete</button>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr data-mock="true">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mr-3">
+                                                    <span class="text-green-600 dark:text-green-400 font-semibold text-sm">BTC</span>
+                                                </div>
+                                                <div>
+                                                    <div class="text-sm font-medium text-slate-900 dark:text-white">Bitcoin</div>
+                                                    <div class="text-sm text-slate-500 dark:text-slate-400">Cryptocurrency</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">0.5</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">€35,000.00</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-slate-900 dark:text-white">€42,500.00</span>
+                                            <button class="admin-only hidden ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onclick="editPrice(this)" data-admin-only="true">
+                                                <i class="fas fa-edit text-xs"></i>
+                                            </button>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">€21,250.00</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm text-success">+€3,750.00 (+21.43%)</span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium admin-only hidden" data-admin-only="true">
+                                            <button class="text-primary hover:text-blue-700 mr-3" onclick="editInvestment(this)">Edit</button>
+                                            <button class="text-danger hover:text-red-700" onclick="deleteInvestment(this)">Delete</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                <!-- @END_COMPONENT: InvestmentsSection -->
+                
+                <!-- @COMPONENT: HistorySection [transaction history] -->
+                <section id="historySection" class="hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Transaction History</h2>
+                            <p class="text-slate-600 dark:text-slate-400">View all investment transactions</p>
+                        </div>
+                        
+                        <!-- Filters -->
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <select class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option>All Types</option>
+                                <option>Buy</option>
+                                <option>Sell</option>
+                                <option>Price Update</option>
+                            </select>
+                            <select class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option>Last 30 days</option>
+                                <option>Last 3 months</option>
+                                <option>Last year</option>
+                                <option>All time</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- History Table -->
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-slate-50 dark:bg-slate-900">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Asset</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Quantity</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Price</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">User</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                                    <!-- @MAP: transactionHistory.map(transaction => ( -->
+                                    <tr data-mock="true">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">Dec 15, 2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                                Buy
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">AAPL</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">25</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">€175.50</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">€4,387.50</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">Alle</td>
+                                    </tr>
+                                    <!-- @END_MAP )) -->
+                                    
+                                    <tr data-mock="true">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">Dec 10, 2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                                Price Update
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">TSLA</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">-</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">€245.50</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">-</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">Alle</td>
+                                    </tr>
+                                    
+                                    <tr data-mock="true">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">Dec 5, 2023</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                                Buy
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">BTC</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">0.5</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">€35,000.00</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">€17,500.00</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">Alle</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                <!-- @END_COMPONENT: HistorySection -->
+            </main>
+        </div>
+        <!-- @END_COMPONENT: Dashboard -->
+        
+        <!-- @COMPONENT: AddInvestmentModal [admin-only investment creation] -->
+        <div id="addInvestmentModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+                <h3 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Add New Investment</h3>
+                
+                <form id="addInvestmentForm" class="space-y-4">
+                    <!-- @STATE: formData:object = {} -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Asset Name</label>
+                        <input type="text" required class="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="e.g., Apple Inc.">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Symbol</label>
+                        <input type="text" required class="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="e.g., AAPL">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Category</label>
+                        <select required class="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="">Select category</option>
+                            <option value="stocks">Stocks</option>
+                            <option value="etf">ETF</option>
+                            <option value="crypto">Cryptocurrency</option>
+                            <option value="bonds">Bonds</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Quantity</label>
+                            <input type="number" step="0.0001" required class="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="25">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Price (€)</label>
+                            <input type="number" step="0.01" required class="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="175.50">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Purchase Date</label>
+                        <input type="date" required class="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Ali's Share (%)</label>
+                        <input type="number" min="0" max="100" value="25" required class="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                </form>
+                
+                <div class="flex space-x-3 mt-6">
+                    <button onclick="hideAddInvestmentModal()" class="flex-1 px-4 py-3 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 transition-colors">Cancel</button>
+                    <button onclick="addInvestment()" class="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors" data-event="click:handleAddInvestment">Add Investment</button>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: AddInvestmentModal -->
+    </div>
+    <!-- @END_COMPONENT: App -->
+    
+    <script>
+        (() => {
+            // @STATE: currentUser:object = null
+            // @STATE: isDarkMode:boolean = false
+            // @STATE: currentSection:string = 'overview'
+            
+            let currentUser = null;
+            let isDarkMode = localStorage.getItem('darkMode') === 'true';
+            let currentSection = 'overview';
+            
+            // Mock data for demonstration
+            const mockData = {
+                portfolio: {
+                    totalValue: 52450.00,
+                    totalGainLoss: 3420.50,
+                    alleShare: 39337.50,
+                    aliShare: 13112.50
+                },
+                investments: [
+                    { id: 1, name: 'Apple Inc.', symbol: 'AAPL', category: 'Technology', quantity: 25, avgPrice: 175.50, currentPrice: 182.30, aliShare: 25 },
+                    { id: 2, name: 'Tesla Inc.', symbol: 'TSLA', category: 'Automotive', quantity: 15, avgPrice: 250.00, currentPrice: 245.50, aliShare: 25 },
+                    { id: 3, name: 'Bitcoin', symbol: 'BTC', category: 'Cryptocurrency', quantity: 0.5, avgPrice: 35000.00, currentPrice: 42500.00, aliShare: 25 }
+                ]
+            };
+            
+            // Initialize theme
+            function initTheme() {
+                if (isDarkMode) {
+                    document.documentElement.classList.add('dark');
+                }
+            }
+            
+            // Toggle theme function
+            window.toggleTheme = function() {
+                isDarkMode = !isDarkMode;
+                document.documentElement.classList.toggle('dark');
+                localStorage.setItem('darkMode', isDarkMode);
+            };
+            
+            // Login functions
+            window.loginAsAli = function() {
+                currentUser = { name: 'Ali', role: 'Viewer', isAdmin: false };
+                showDashboard();
+            };
+            
+            window.showPasswordPrompt = function() {
+                document.getElementById('passwordModal').classList.remove('hidden');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordError').classList.add('hidden');
+                setTimeout(() => document.getElementById('passwordInput').focus(), 100);
+            };
+            
+            window.hidePasswordPrompt = function() {
+                document.getElementById('passwordModal').classList.add('hidden');
+            };
+            
+            window.handlePasswordKeypress = function(event) {
+                if (event.key === 'Enter') {
+                    verifyPassword();
+                }
+            };
+            
+            window.verifyPassword = function() {
+                const password = document.getElementById('passwordInput').value;
+                if (password === '0000') {
+                    currentUser = { name: 'Alle', role: 'Admin', isAdmin: true };
+                    hidePasswordPrompt();
+                    showDashboard();
+                } else {
+                    document.getElementById('passwordError').classList.remove('hidden');
+                    document.getElementById('passwordInput').focus();
+                }
+            };
+            
+            function showDashboard() {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                
+                // Update user role display
+                document.getElementById('userRole').textContent = currentUser.role;
+                
+                // Show/hide admin-only elements
+                const adminElements = document.querySelectorAll('[data-admin-only="true"]');
+                adminElements.forEach(element => {
+                    if (currentUser.isAdmin) {
+                        element.classList.remove('hidden');
+                        if (element.classList.contains('admin-only')) {
+                            element.classList.remove('admin-only');
+                        }
+                    } else {
+                        element.classList.add('hidden');
+                    }
+                });
+                
+                // Update navigation
+                updateNavigation();
+                
+                // Initialize charts
+                initializeCharts();
+            }
+            
+            window.logout = function() {
+                currentUser = null;
+                document.getElementById('dashboard').classList.add('hidden');
+                document.getElementById('loginScreen').classList.remove('hidden');
+            };
+            
+            // Navigation functions
+            window.showSection = function(section) {
+                // Hide all sections
+                document.querySelectorAll('#overviewSection, #investmentsSection, #historySection').forEach(s => {
+                    s.classList.add('hidden');
+                });
+                
+                // Show selected section
+                document.getElementById(section + 'Section').classList.remove('hidden');
+                currentSection = section;
+                updateNavigation();
+            };
+            
+            function updateNavigation() {
+                // Update navigation active states
+                document.querySelectorAll('.nav-tab, .nav-tab-mobile').forEach(tab => {
+                    const section = tab.getAttribute('data-section');
+                    if (section === currentSection) {
+                        tab.classList.add('bg-primary', 'text-white');
+                        tab.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:text-slate-900', 'dark:hover:text-white');
+                    } else {
+                        tab.classList.remove('bg-primary', 'text-white');
+                        tab.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:text-slate-900', 'dark:hover:text-white');
+                    }
+                });
+            }
+            
+            // Investment management functions
+            window.showAddInvestmentModal = function() {
+                if (!currentUser?.isAdmin) return;
+                document.getElementById('addInvestmentModal').classList.remove('hidden');
+            };
+            
+            window.hideAddInvestmentModal = function() {
+                document.getElementById('addInvestmentModal').classList.add('hidden');
+                document.getElementById('addInvestmentForm').reset();
+            };
+            
+            window.addInvestment = function() {
+                // TODO: Implement form validation and data persistence
+                console.log('Adding investment...');
+                hideAddInvestmentModal();
+                // This would normally add to localStorage and update the UI
+            };
+            
+            window.editPrice = function(button) {
+                if (!currentUser?.isAdmin) return;
+                // TODO: Implement inline price editing
+                console.log('Editing price...');
+            };
+            
+            window.editInvestment = function(button) {
+                if (!currentUser?.isAdmin) return;
+                // TODO: Implement investment editing
+                console.log('Editing investment...');
+            };
+            
+            window.deleteInvestment = function(button) {
+                if (!currentUser?.isAdmin) return;
+                // TODO: Implement investment deletion with confirmation
+                console.log('Deleting investment...');
+            };
+            
+            // Chart initialization
+            function initializeCharts() {
+                const ctx = document.getElementById('portfolioChart');
+                if (!ctx) return;
+                
+                // Mock chart data
+                const chartData = {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Portfolio Value (€)',
+                        data: [45000, 46200, 44800, 47300, 49100, 48700, 50200, 49800, 51300, 52100, 51800, 52450],
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                };
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: isDarkMode ? '#374151' : '#E5E7EB'
+                                },
+                                ticks: {
+                                    color: isDarkMode ? '#9CA3AF' : '#6B7280',
+                                    callback: function(value) {
+                                        return '€' + value.toLocaleString();
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: isDarkMode ? '#374151' : '#E5E7EB'
+                                },
+                                ticks: {
+                                    color: isDarkMode ? '#9CA3AF' : '#6B7280'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Initialize app
+            initTheme();
+            
+            // Handle escape key for modals
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    hidePasswordPrompt();
+                    hideAddInvestmentModal();
+                }
+            });
+            
+            // Click outside modal to close
+            document.addEventListener('click', (e) => {
+                if (e.target.id === 'passwordModal') {
+                    hidePasswordPrompt();
+                }
+                if (e.target.id === 'addInvestmentModal') {
+                    hideAddInvestmentModal();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -44,14 +44,17 @@ export class FinancialDataService {
 
     try {
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        console.warn(`API request failed: ${response.status} for ${url}`);
+        return null; // Return null instead of throwing error
+      }
       
       const data = await response.json();
       this.cache.set(cacheKey, { data, timestamp: now });
       return data;
     } catch (error) {
-      console.error('API fetch error:', error);
-      throw error;
+      console.warn('API fetch error:', error);
+      return null; // Return null instead of throwing error
     }
   }
 
@@ -105,7 +108,8 @@ export class FinancialDataService {
         });
       }
     } catch (error) {
-      console.warn('Yahoo Finance search failed:', error);
+      // Silently continue to fallback data
+      console.warn('Yahoo Finance search failed, using fallback data');
     }
   }
 
@@ -127,7 +131,8 @@ export class FinancialDataService {
         });
       }
     } catch (error) {
-      console.warn('Alpha Vantage search failed:', error);
+      // Silently continue to other sources
+      console.warn('Alpha Vantage search failed, continuing with other sources');
     }
   }
 

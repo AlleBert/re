@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { InvestmentForm } from "@/components/investment-form";
 import { SellInvestmentForm } from "@/components/sell-investment-form";
-import { PortfolioChart } from "@/components/portfolio-chart";
-import { LiveChart } from "@/components/live-chart";
+import { MinimalPortfolioChart } from "@/components/minimal-portfolio-chart";
+
 import { LocalStorageService } from "@/lib/storage";
 import { PriceService } from "@/services/priceService";
 import { FinancialDataService } from "@/services/financialDataService";
@@ -48,25 +48,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         loadData();
       });
 
-      // Also start real-time price updates using the financial data service
-      const interval = setInterval(async () => {
-        const currentInvestments = LocalStorageService.getInvestments();
-        for (const investment of currentInvestments) {
-          try {
-            const quote = await FinancialDataService.getRealTimeQuote(investment.symbol);
-            if (quote && quote.price !== investment.currentPrice) {
-              LocalStorageService.updateInvestmentPrice(investment.id, quote.price, 'Market Update');
-            }
-          } catch (error) {
-            console.warn(`Failed to update price for ${investment.symbol}:`, error);
-          }
-        }
-        loadData();
-      }, 60000); // Update every minute
-
       return () => {
         PriceService.stopPriceUpdates();
-        clearInterval(interval);
       };
     }
 
@@ -206,9 +189,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Panoramica</TabsTrigger>
-            <TabsTrigger value="charts">Grafici Live</TabsTrigger>
             <TabsTrigger value="investments">Investimenti</TabsTrigger>
             <TabsTrigger value="history">Storico</TabsTrigger>
           </TabsList>
@@ -291,13 +273,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               </div>
             )}
 
-            {/* Portfolio Performance Chart */}
+            {/* Minimal Portfolio Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Portfolio Performance</CardTitle>
+                <CardTitle>Andamento Portfolio</CardTitle>
               </CardHeader>
               <CardContent>
-                <PortfolioChart investments={investments} className="h-64" />
+                <MinimalPortfolioChart investments={investments} />
               </CardContent>
             </Card>
 
@@ -309,8 +291,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {transactions.slice(0, 5).map((transaction) => (
-                      <div key={transaction.id} className="flex items-center justify-between py-2">
+                    {transactions.slice(0, 5).map((transaction, index) => (
+                      <div key={`${transaction.id}-${transaction.timestamp}-${index}`} className="flex items-center justify-between py-2">
                         <div className="flex items-center space-x-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                             transaction.type === 'buy' ? 'bg-green-100 dark:bg-green-900' :
@@ -380,15 +362,16 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
 
-          {/* Live Charts Section */}
-          <TabsContent value="charts" className="space-y-6">
-            <LiveChart 
-              investments={investments} 
-              portfolio={portfolio} 
-              currentUser={user} 
-            />
+            {/* Minimal Portfolio Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Andamento Portfolio</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MinimalPortfolioChart investments={investments} />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Investments Section */}
@@ -572,8 +555,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
+                  {filteredTransactions.map((transaction, index) => (
+                    <TableRow key={`transaction-${transaction.id}-${transaction.timestamp}-${index}`}>
                       <TableCell>
                         {format(new Date(transaction.timestamp), 'MMM dd, yyyy')}
                       </TableCell>

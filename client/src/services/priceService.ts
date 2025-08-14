@@ -47,15 +47,10 @@ export class PriceService {
         // Get investments from localStorage
         const investments = JSON.parse(localStorage.getItem('investment-tracker-investments') || '[]');
         
-        const updates = await Promise.all(
-          investments.map(async (investment: any) => {
-            const newPrice = await this.getRealPriceUpdate(investment.currentPrice, investment.symbol);
-            return {
-              id: investment.id,
-              price: newPrice
-            };
-          })
-        );
+        const updates = investments.map((investment: any) => ({
+          id: investment.id,
+          price: this.mockPriceUpdate(investment.currentPrice, investment.symbol)
+        }));
 
         onUpdate(updates);
       } catch (error) {

@@ -6,11 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LocalStorageService } from "@/lib/storage";
-import { InvestmentSearch } from "@/components/investment-search";
 
 interface InvestmentFormProps {
   open: boolean;
@@ -20,15 +18,12 @@ interface InvestmentFormProps {
 
 export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState("search");
 
   const form = useForm<InsertInvestment>({
     resolver: zodResolver(insertInvestmentSchema),
     defaultValues: {
       name: "",
       symbol: "",
-      isin: "",
-      market: "",
       category: "stocks",
       quantity: 0,
       avgPrice: 0,
@@ -37,17 +32,6 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
       aliShare: 25,
     },
   });
-
-  const handleInvestmentSelect = (investment: any) => {
-    form.setValue("name", investment.name);
-    form.setValue("symbol", investment.symbol);
-    form.setValue("isin", investment.isin);
-    form.setValue("market", investment.market);
-    form.setValue("category", investment.category);
-    form.setValue("currentPrice", investment.currentPrice);
-    form.setValue("avgPrice", investment.currentPrice);
-    setActiveTab("details");
-  };
 
   const onSubmit = async (data: InsertInvestment) => {
     setIsSubmitting(true);
@@ -70,27 +54,13 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Investment</DialogTitle>
-          <DialogDescription>
-            Search for investments on Fineco platform or add manually
-          </DialogDescription>
         </DialogHeader>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="search">Search Fineco</TabsTrigger>
-            <TabsTrigger value="details">Investment Details</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="search" className="space-y-4">
-            <InvestmentSearch onSelect={handleInvestmentSelect} />
-          </TabsContent>
-
-          <TabsContent value="details" className="space-y-4">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -105,44 +75,14 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="symbol"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Symbol</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., AAPL" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="isin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ISIN</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., US0378331005" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <FormField
               control={form.control}
-              name="market"
+              name="symbol"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Market</FormLabel>
+                  <FormLabel>Symbol</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., NASDAQ" {...field} />
+                    <Input placeholder="e.g., AAPL" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -269,18 +209,16 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               )}
             />
 
-                <div className="flex space-x-3 pt-4">
-                  <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting} className="flex-1">
-                    {isSubmitting ? "Adding..." : "Add Investment"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </TabsContent>
-        </Tabs>
+            <div className="flex space-x-3 pt-4">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="flex-1">
+                {isSubmitting ? "Adding..." : "Add Investment"}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

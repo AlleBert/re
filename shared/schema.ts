@@ -4,10 +4,8 @@ export const investmentSchema = z.object({
   id: z.string(),
   name: z.string(),
   symbol: z.string(),
-  isin: z.string().optional(),
-  market: z.string().optional(),
   category: z.enum(["stocks", "etf", "crypto", "bonds"]),
-  quantity: z.number(),
+  quantity: z.number().positive(),
   avgPrice: z.number().positive(),
   currentPrice: z.number().positive(),
   purchaseDate: z.string(),
@@ -27,14 +25,6 @@ export const transactionSchema = z.object({
   user: z.enum(["Ali", "Alle"]),
   timestamp: z.string(),
 });
-
-export const sellInvestmentSchema = z.object({
-  investmentId: z.string(),
-  quantity: z.number().positive(),
-  pricePerUnit: z.number().positive(),
-});
-
-export type SellInvestment = z.infer<typeof sellInvestmentSchema>;
 
 export const insertInvestmentSchema = investmentSchema.omit({
   id: true,

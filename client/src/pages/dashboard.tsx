@@ -28,6 +28,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [showInvestmentForm, setShowInvestmentForm] = useState(false);
+  const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [newPrice, setNewPrice] = useState("");
   const [historyFilter, setHistoryFilter] = useState("all");
@@ -41,7 +42,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     if (user.isAdmin) {
       const handlePriceUpdates = (updates: any[]) => {
         updates.forEach(update => {
-          LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'FMP API');
+          LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'Yahoo Finance');
         });
         loadData();
         setLastPriceUpdate(Date.now());
@@ -64,7 +65,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     if (user.isAdmin && investments.length > 0) {
       const handlePriceUpdates = (updates: any[]) => {
         updates.forEach(update => {
-          LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'FMP API');
+          LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'Yahoo Finance');
         });
         loadData();
         setLastPriceUpdate(Date.now());
@@ -86,6 +87,12 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     setInvestments(investmentData);
     setTransactions(transactionData);
     setPortfolio(LocalStorageService.calculatePortfolioSummary(investmentData));
+  };
+
+  const handleEditInvestment = (investment: Investment) => {
+    if (!user.isAdmin) return;
+    setEditingInvestment(investment);
+    setShowInvestmentForm(true);
   };
 
   const handlePriceEdit = (investment: Investment) => {
@@ -192,7 +199,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     // Force immediate price update
                     const handlePriceUpdates = (updates: any[]) => {
                       updates.forEach(update => {
-                        LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'FMP API');
+                        LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'Yahoo Finance');
                       });
                       loadData();
                       setLastPriceUpdate(Date.now());
@@ -457,45 +464,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         <TableCell>{investment.quantity}</TableCell>
                         <TableCell>{formatCurrency(investment.avgPrice)}</TableCell>
                         <TableCell>
-                          {editingPriceId === investment.id ? (
-                            <div className="flex items-center space-x-2">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={newPrice}
-                                onChange={(e) => setNewPrice(e.target.value)}
-                                className="w-20"
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handlePriceUpdate(investment.id);
-                                  }
-                                }}
-                              />
-                              <Button size="sm" onClick={() => handlePriceUpdate(investment.id)}>
-                                Save
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => setEditingPriceId(null)}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center space-x-2">
-                              <span>{formatCurrency(investment.currentPrice)}</span>
-                              {user.isAdmin && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handlePriceEdit(investment)}
-                                >
-                                  <Edit size={14} />
-                                </Button>
-                              )}
-                            </div>
-                          )}
+                          <span>{formatCurrency(investment.currentPrice)}</span>
                         </TableCell>
                         <TableCell>{formatCurrency(totalValue)}</TableCell>
                         <TableCell>
@@ -511,8 +480,17 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                             <div className="flex space-x-2">
                               <Button
                                 size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditInvestment(investment)}
+                                title="Modifica investimento"
+                              >
+                                <Edit size={14} />
+                              </Button>
+                              <Button
+                                size="sm"
                                 variant="outline"
                                 onClick={() => handleDeleteInvestment(investment.id)}
+                                title="Elimina investimento"
                               >
                                 <Trash2 size={14} />
                               </Button>
@@ -612,8 +590,15 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
       {/* Investment Form Modal */}
       <InvestmentForm
         open={showInvestmentForm}
-        onClose={() => setShowInvestmentForm(false)}
-        onSuccess={loadData}
+        editingInvestment={editingInvestment}
+        onClose={() => {
+          setShowInvestmentForm(false);
+          setEditingInvestment(null);
+        }}
+        onSuccess={() => {
+          loadData();
+          setEditingInvestment(null);
+        }}
       />
     </div>
   );

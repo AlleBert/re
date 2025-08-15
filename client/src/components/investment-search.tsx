@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { fmpService, FMPSearchResult, FMPQuote } from "@/services/fmpService";
+import { yahooFinanceService, FormattedSearchResult, FormattedQuote } from "@/services/yahooFinanceService";
 
 interface SecuritySearchResult {
   symbol: string;
@@ -36,16 +36,16 @@ export function InvestmentSearch({ onSelect }: InvestmentSearchProps) {
     setError(null);
     
     try {
-      // Use FMP service to search symbols
-      const fmpResults = await fmpService.searchSymbol(searchQuery);
+      // Use Yahoo Finance service to search symbols
+      const yahooResults = await yahooFinanceService.searchSymbol(searchQuery);
       
-      // Convert FMP results to expected format and get quotes for prices
+      // Convert Yahoo results to expected format and get quotes for prices
       const securityResults: SecuritySearchResult[] = [];
       
-      for (const result of fmpResults.slice(0, 10)) {
+      for (const result of yahooResults.slice(0, 10)) {
         try {
           // Get current price for each symbol
-          const quote = await fmpService.getQuote(result.symbol);
+          const quote = await yahooFinanceService.getQuote(result.symbol);
           
           securityResults.push({
             symbol: result.symbol,

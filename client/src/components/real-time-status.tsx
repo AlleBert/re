@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { RefreshCw, Wifi, WifiOff, Clock } from "lucide-react";
 import { realTimePriceService } from "@/services/realTimePriceService";
-import { fmpService } from "@/services/fmpService";
+import { yahooFinanceService } from "@/services/yahooFinanceService";
 
 interface RealTimeStatusProps {
   lastUpdate: number;
@@ -25,7 +25,7 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
 
   useEffect(() => {
     const checkConfiguration = async () => {
-      const configured = await fmpService.isConfigured();
+      const configured = await yahooFinanceService.isConfigured();
       setIsConfigured(configured);
     };
     checkConfiguration();

@@ -1,4 +1,4 @@
-import { fmpService, FMPQuote } from './fmpService';
+import { yahooFinanceService, FormattedQuote } from './yahooFinanceService';
 import { Investment } from '@shared/schema';
 
 interface PriceUpdate {
@@ -19,11 +19,7 @@ class RealTimePriceService {
   private lastUpdate: number = 0;
 
   async startPriceUpdates(investments: Investment[], callback: PriceUpdateCallback): Promise<void> {
-    if (!(await fmpService.isConfigured())) {
-      console.warn('FMP service not configured. Real-time updates disabled.');
-      return;
-    }
-
+    // Yahoo Finance service is always available (no API key required)
     this.updateCallbacks.add(callback);
 
     if (!this.isRunning && investments.length > 0) {
@@ -62,10 +58,10 @@ class RealTimePriceService {
   private async fetchAndBroadcastUpdates(investments: Investment[]): Promise<void> {
     try {
       const symbols = investments.map(inv => inv.symbol);
-      const quotes = await fmpService.getMultipleQuotes(symbols);
+      const quotes = await yahooFinanceService.getMultipleQuotes(symbols);
       
       const updates: PriceUpdate[] = quotes
-        .filter((quote): quote is FMPQuote => quote !== null)
+        .filter((quote): quote is FormattedQuote => quote !== null)
         .map(quote => ({
           symbol: quote.symbol,
           price: quote.price,
@@ -95,7 +91,7 @@ class RealTimePriceService {
 
   async validateAndGetPrice(symbol: string): Promise<{ valid: boolean; price?: number; name?: string; error?: string }> {
     try {
-      const quote = await fmpService.getQuote(symbol);
+      const quote = await yahooFinanceService.getQuote(symbol);
       
       if (quote) {
         return {
@@ -119,7 +115,7 @@ class RealTimePriceService {
 
   async searchSymbols(query: string) {
     try {
-      return await fmpService.searchSymbol(query);
+      return await yahooFinanceService.searchSymbol(query);
     } catch (error) {
       console.error('Symbol search failed:', error);
       return [];

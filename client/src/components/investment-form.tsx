@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertInvestmentSchema, type InsertInvestment } from "@shared/schema";
+import { insertInvestmentSchema, type InsertInvestment, type Investment } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,15 +13,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Check, AlertCircle, Search } from "lucide-react";
 import { LocalStorageService } from "@/lib/storage";
 import { realTimePriceService } from "@/services/realTimePriceService";
-import { fmpService } from "@/services/fmpService";
+import { yahooFinanceService } from "@/services/yahooFinanceService";
 
 interface InvestmentFormProps {
   open: boolean;
+  editingInvestment?: Investment | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps) {
+export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: InvestmentFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputMode, setInputMode] = useState<"quantity" | "total">("quantity");
   const [symbolValidation, setSymbolValidation] = useState<{
@@ -44,14 +45,24 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
     resolver: zodResolver(insertInvestmentSchema.extend({
       totalAmount: insertInvestmentSchema.shape.quantity.optional()
     })),
-    defaultValues: {
+    defaultValues: editingInvestment ? {
+      name: editingInvestment.name,
+      symbol: editingInvestment.symbol,
+      category: editingInvestment.category,
+      quantity: editingInvestment.quantity,
+      avgPrice: editingInvestment.avgPrice,
+      currentPrice: editingInvestment.currentPrice,
+      totalAmount: undefined,
+      purchaseDate: editingInvestment.purchaseDate,
+      aliShare: editingInvestment.aliShare,
+    } : {
       name: "",
       symbol: "",
       category: "stocks",
-      quantity: 0,
-      avgPrice: 0,
-      currentPrice: 0,
-      totalAmount: 0,
+      quantity: undefined,
+      avgPrice: undefined,
+      currentPrice: undefined,
+      totalAmount: undefined,
       purchaseDate: new Date().toISOString().split('T')[0],
       aliShare: 25,
     },
@@ -78,7 +89,7 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
         
         // Auto-fill form fields if validation is successful
         form.setValue('name', result.name);
-        form.setValue('currentPrice', result.price);
+        // Set the current price as avgPrice (user can modify if needed)
         if (!form.getValues('avgPrice')) {
           form.setValue('avgPrice', result.price);
         }
@@ -141,9 +152,9 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
   // Debounced symbol validation
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
-      if (name === 'symbol' && value.symbol) {
+      if (name === 'symbol' && value.symbol && typeof value.symbol === 'string') {
         const timer = setTimeout(() => {
-          validateSymbol(value.symbol);
+          validateSymbol(value.symbol!);
         }, 1000);
         return () => clearTimeout(timer);
       }
@@ -154,8 +165,8 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
   const onSubmit = async (data: InsertInvestment & { totalAmount?: number }) => {
     setIsSubmitting(true);
     try {
-      // Validate symbol before submitting if FMP is available - use sync version for better UX
-      if (fmpService.isConfiguredSync() && symbolValidation.status === 'invalid') {
+      // Validate symbol before submitting if validation failed
+      if (!editingInvestment && symbolValidation.status === 'invalid') {
         throw new Error('Per favore usa un simbolo valido');
       }
 
@@ -169,12 +180,16 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
         // Already set correctly
       }
 
-      // Set current price to average price if not provided
-      if (!finalData.currentPrice) {
-        finalData.currentPrice = finalData.avgPrice;
-      }
+      // Set current price to average price initially
+      finalData.currentPrice = finalData.avgPrice;
       
-      LocalStorageService.addInvestment(finalData);
+      if (editingInvestment) {
+        // Update existing investment
+        LocalStorageService.updateInvestment(editingInvestment.id, finalData);
+      } else {
+        // Add new investment
+        LocalStorageService.addInvestment(finalData);
+      }
       form.reset();
       setSymbolValidation({ status: 'idle' });
       setSymbolSearch({ query: '', results: [], isSearching: false });
@@ -208,10 +223,10 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="investment-form-description">
         <DialogHeader className="space-y-3">
           <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-white">
-            Aggiungi Nuovo Investimento
+            {editingInvestment ? 'Modifica Investimento' : 'Aggiungi Nuovo Investimento'}
           </DialogTitle>
           <p id="investment-form-description" className="text-sm text-slate-600 dark:text-slate-400">
-            Cerca e seleziona un asset per aggiungere un nuovo investimento al portfolio
+            {editingInvestment ? 'Modifica i dati dell\'investimento esistente' : 'Cerca e seleziona un asset per aggiungere un nuovo investimento al portfolio'}
           </p>
         </DialogHeader>
         
@@ -441,7 +456,8 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
                           step="0.0001" 
                           placeholder="25"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -461,7 +477,8 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
                           step="0.01" 
                           placeholder="175.50"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -483,7 +500,8 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
                           step="0.01" 
                           placeholder="4387.50"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -513,59 +531,42 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               </div>
             )}
 
-            <FormField
-              control={form.control}
-              name="currentPrice"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Prezzo Corrente (€)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      placeholder="Lascia vuoto per usare il prezzo di acquisto"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="purchaseDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data Acquisto</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="purchaseDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data Acquisto</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="aliShare"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quota Ali (%)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="0" 
-                      max="100"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 25)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="aliShare"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quota Ali (%)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        max="100"
+                        {...field}
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex space-x-3 pt-6 border-t border-slate-200 dark:border-slate-700">
               <Button type="button" variant="outline" onClick={onClose} className="flex-1 h-11">
@@ -578,7 +579,7 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
                     <span>Aggiungendo...</span>
                   </div>
                 ) : (
-                  "Aggiungi Investimento"
+                  editingInvestment ? "Salva Modifiche" : "Aggiungi Investimento"
                 )}
               </Button>
             </div>

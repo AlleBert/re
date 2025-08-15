@@ -28,6 +28,7 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
           day: 'numeric',
           ...(period === "90d" && { year: '2-digit' })
         }),
+        rawDate: date.toISOString(),
       };
 
       if (viewMode === "cumulative") {
@@ -108,34 +109,39 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
           <LineChart data={chartData}>
             <XAxis 
               dataKey="date" 
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              interval="preserveStartEnd"
-              className="text-slate-600 dark:text-slate-400"
+              hide={true}
             />
             <YAxis 
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={formatCurrency}
-              domain={['dataMin - 1000', 'dataMax + 1000']}
-              className="text-slate-600 dark:text-slate-400"
+              hide={true}
             />
             <Tooltip 
-              formatter={(value: number, name: string) => [
-                formatCurrency(value), 
-                viewMode === "cumulative" ? "Valore Portfolio" : name
-              ]}
-              labelClassName="text-slate-600 dark:text-slate-300"
               contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                border: '1px solid #334155',
                 borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                color: '#e2e8f0',
+                padding: '12px'
               }}
+              formatter={(value: any, name: any) => {
+                const investment = investments.find(inv => inv.symbol === name);
+                const displayName = investment ? `${investment.name} (${investment.symbol})` : name === 'portfolio' ? 'Portfolio Totale' : name;
+                return [formatCurrency(value), displayName];
+              }}
+              labelFormatter={(label) => {
+                const dataPoint = chartData.find(d => d.date === label);
+                if (dataPoint?.rawDate) {
+                  const date = new Date(dataPoint.rawDate);
+                  return date.toLocaleDateString('it-IT', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  });
+                }
+                return label;
+              }}
+              labelStyle={{ color: '#94a3b8', fontWeight: 'bold' }}
             />
-            {viewMode === "separate" && <Legend />}
             
             {viewMode === "cumulative" ? (
               <Line
@@ -144,7 +150,7 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
                 stroke="hsl(var(--primary))"
                 strokeWidth={3}
                 dot={false}
-                activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "hsl(var(--background))" }}
+                activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
               />
             ) : (
               investments.map((investment, index) => (
@@ -155,7 +161,7 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
                   stroke={getColorForInvestment(index)}
                   strokeWidth={2}
                   dot={false}
-                  activeDot={{ r: 4, fill: getColorForInvestment(index) }}
+                  activeDot={{ r: 5, fill: getColorForInvestment(index), stroke: "#ffffff", strokeWidth: 2 }}
                 />
               ))
             )}

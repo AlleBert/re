@@ -70,14 +70,8 @@ class FMPService {
       await this.initializeApiKey();
     }
     
-    if (!this.apiKey) {
-      throw new Error('FMP API key not configured');
-    }
-
-    const url = `${this.baseUrl}${endpoint}${endpoint.includes('?') ? '&' : '?'}apikey=${this.apiKey}`;
-    
     try {
-      const response = await fetch(url);
+      const response = await fetch(endpoint);
       
       if (!response.ok) {
         throw new Error(`FMP API error: ${response.status} ${response.statusText}`);
@@ -98,7 +92,7 @@ class FMPService {
 
   async searchSymbol(query: string): Promise<FMPSearchResult[]> {
     try {
-      const results = await this.makeRequest<FMPSearchResult[]>(`/search?query=${encodeURIComponent(query)}&limit=10`);
+      const results = await this.makeRequest<FMPSearchResult[]>(`/api/fmp/search?query=${encodeURIComponent(query)}`);
       return results || [];
     } catch (error) {
       console.error('Symbol search failed:', error);
@@ -108,7 +102,7 @@ class FMPService {
 
   async getQuote(symbol: string): Promise<FMPQuote | null> {
     try {
-      const quotes = await this.makeRequest<FMPQuote[]>(`/quote/${symbol.toUpperCase()}`);
+      const quotes = await this.makeRequest<FMPQuote[]>(`/api/fmp/quote/${symbol.toUpperCase()}`);
       return quotes?.[0] || null;
     } catch (error) {
       console.error(`Failed to get quote for ${symbol}:`, error);
@@ -121,7 +115,7 @@ class FMPService {
     
     try {
       const symbolsStr = symbols.map(s => s.toUpperCase()).join(',');
-      const quotes = await this.makeRequest<FMPQuote[]>(`/quote/${symbolsStr}`);
+      const quotes = await this.makeRequest<FMPQuote[]>(`/api/fmp/quotes?symbols=${symbolsStr}`);
       return quotes || [];
     } catch (error) {
       console.error('Failed to get multiple quotes:', error);
@@ -148,7 +142,7 @@ class FMPService {
 
   async getCompanyProfile(symbol: string): Promise<any> {
     try {
-      const profiles = await this.makeRequest<any[]>(`/profile/${symbol.toUpperCase()}`);
+      const profiles = await this.makeRequest<any[]>(`/api/fmp/profile/${symbol.toUpperCase()}`);
       return profiles?.[0] || null;
     } catch (error) {
       console.error(`Failed to get company profile for ${symbol}:`, error);

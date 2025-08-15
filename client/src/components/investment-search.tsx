@@ -5,7 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FinancialDataService, SecuritySearchResult } from "@/services/financialDataService";
+import { fmpService, FMPSearchResult, FMPQuote } from "@/services/fmpService";
+
+interface SecuritySearchResult {
+  symbol: string;
+  name: string;
+  isin?: string;
+  exchange: string;
+  currency: string;
+  type: 'stock' | 'etf' | 'bond' | 'crypto';
+  currentPrice?: number;
+  change?: number;
+  changePercent?: number;
+}
 
 interface InvestmentSearchProps {
   onSelect: (investment: SecuritySearchResult & { category: "stocks" | "etf" | "crypto" | "bonds" }) => void;
@@ -24,13 +36,73 @@ export function InvestmentSearch({ onSelect }: InvestmentSearchProps) {
     setError(null);
     
     try {
-      const searchResults = await FinancialDataService.searchSecurities(searchQuery);
-      return searchResults;
+      // Use FMP service to search symbols
+      const fmpResults = await fmpService.searchSymbol(searchQuery);
+      
+      // Convert FMP results to expected format and get quotes for prices
+      const securityResults: SecuritySearchResult[] = [];
+      
+      for (const result of fmpResults.slice(0, 10)) {
+        try {
+          // Get current price for each symbol
+          const quote = await fmpService.getQuote(result.symbol);
+          
+          securityResults.push({
+            symbol: result.symbol,
+            name: result.name,
+            exchange: result.exchangeShortName,
+            currency: result.currency || 'USD',
+            type: determineSecurityType(result.exchangeShortName, result.symbol),
+            currentPrice: quote?.price,
+            change: quote?.change,
+            changePercent: quote?.changesPercentage
+          });
+        } catch (quoteError) {
+          // If quote fails, still add the basic info
+          securityResults.push({
+            symbol: result.symbol,
+            name: result.name,
+            exchange: result.exchangeShortName,
+            currency: result.currency || 'USD',
+            type: determineSecurityType(result.exchangeShortName, result.symbol),
+          });
+        }
+      }
+      
+      return securityResults;
     } catch (error) {
       console.error("Search error:", error);
       setError("Errore durante la ricerca degli investimenti. Riprova più tardi.");
       return [];
     }
+  };
+
+  const determineSecurityType = (exchange: string, symbol: string): 'stock' | 'etf' | 'bond' | 'crypto' => {
+    const exchangeUpper = exchange.toUpperCase();
+    const symbolUpper = symbol.toUpperCase();
+    
+    // ETF detection
+    if (symbolUpper.includes('ETF') || symbolUpper.endsWith('.L') || 
+        symbolUpper.includes('SPY') || symbolUpper.includes('VOO') || 
+        symbolUpper.includes('QQQ') || symbolUpper.includes('IWDA') || 
+        symbolUpper.includes('VWCE')) {
+      return 'etf';
+    }
+    
+    // Bond detection
+    if (exchangeUpper.includes('BOND') || symbolUpper.includes('BTP') || 
+        symbolUpper.includes('TREASURY') || /^IT\d{10}$/.test(symbolUpper)) {
+      return 'bond';
+    }
+    
+    // Crypto detection  
+    if (symbolUpper.includes('-EUR') || symbolUpper.includes('-USD') || 
+        symbolUpper.includes('BTC') || symbolUpper.includes('ETH') ||
+        exchangeUpper.includes('CRYPTO')) {
+      return 'crypto';
+    }
+    
+    return 'stock';
   };
 
   useEffect(() => {
@@ -43,7 +115,7 @@ export function InvestmentSearch({ onSelect }: InvestmentSearchProps) {
 
       // Validate ISIN format if query looks like an ISIN
       if (query.length === 12 && /^[A-Z]{2}[A-Z0-9]{10}$/.test(query.toUpperCase())) {
-        const isValid = FinancialDataService.validateISIN(query.toUpperCase());
+        const isValid = validateISIN(query.toUpperCase());
         setIsIsinValid(isValid);
       } else {
         setIsIsinValid(null);
@@ -93,6 +165,14 @@ export function InvestmentSearch({ onSelect }: InvestmentSearchProps) {
       currentPrice: investment.currentPrice || 0,
     };
     onSelect(mappedInvestment);
+  };
+
+  const validateISIN = (isin: string): boolean => {
+    if (!isin || isin.length !== 12) return false;
+    
+    // Basic ISIN format check: 2 letters + 10 alphanumeric
+    const isinRegex = /^[A-Z]{2}[A-Z0-9]{10}$/;
+    return isinRegex.test(isin);
   };
 
   return (

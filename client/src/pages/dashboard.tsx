@@ -10,17 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/theme-provider";
 import { InvestmentForm } from "@/components/investment-form";
-<<<<<<< HEAD
-import { SellInvestmentForm } from "@/components/sell-investment-form";
 import { MinimalPortfolioChart } from "@/components/minimal-portfolio-chart";
-
 import { LocalStorageService } from "@/lib/storage";
-import { PriceService } from "@/services/priceService";
-import { FinancialDataService } from "@/services/financialDataService";
-=======
-import { PortfolioChart } from "@/components/portfolio-chart";
-import { LocalStorageService } from "@/lib/storage";
->>>>>>> parent of 47917f9 (Add ability to sell investments and search Fineco platform)
 import { Investment, Transaction, PortfolioSummary } from "@shared/schema";
 import { User as UserType } from "@/lib/types";
 
@@ -42,30 +33,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   useEffect(() => {
     loadData();
-<<<<<<< HEAD
-    
-    // Start real-time price updates for admin users
-    if (user.isAdmin) {
-      PriceService.startPriceUpdates((updates) => {
-        updates.forEach(update => {
-          LocalStorageService.updateInvestmentPrice(update.id, update.price, 'System');
-        });
-        loadData();
-      });
-
-      return () => {
-        PriceService.stopPriceUpdates();
-      };
-    }
-
-    // Cleanup on unmount
-    return () => {
-      PriceService.stopPriceUpdates();
-    };
-  }, [user.isAdmin]);
-=======
   }, []);
->>>>>>> parent of 47917f9 (Add ability to sell investments and search Fineco platform)
 
   const loadData = () => {
     const investmentData = LocalStorageService.getInvestments();

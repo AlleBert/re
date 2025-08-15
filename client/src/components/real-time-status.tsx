@@ -43,8 +43,8 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
   const getStatusColor = () => {
     if (!isConfigured) return "destructive";
     if (!isActive) return "secondary";
-    if (timeSinceUpdate > 60) return "warning";
-    return "success";
+    if (timeSinceUpdate > 60) return "secondary";
+    return "default";
   };
 
   const getStatusText = () => {
@@ -66,10 +66,12 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
       <div className="flex items-center space-x-2">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant={getStatusColor() as any} className="flex items-center space-x-1">
-              {getStatusIcon()}
-              <span>{getStatusText()}</span>
-            </Badge>
+            <div>
+              <Badge variant={getStatusColor() as any} className="flex items-center space-x-1">
+                {getStatusIcon()}
+                <span>{getStatusText()}</span>
+              </Badge>
+            </div>
           </TooltipTrigger>
           <TooltipContent>
             <div className="text-sm space-y-1">

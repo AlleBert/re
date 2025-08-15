@@ -207,13 +207,15 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               )}
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="icon" onClick={toggleTheme} className="relative">
-                {theme === "dark" ? (
-                  <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                ) : (
-                  <Moon className="h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                )}
-                <span className="sr-only">Toggle theme</span>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={toggleTheme} 
+                className="relative h-10 w-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200"
+              >
+                <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-500" />
+                <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-blue-400" />
+                <span className="sr-only">Cambia tema</span>
               </Button>
               <Button variant="outline" onClick={onLogout}>
                 <i className="fas fa-sign-out-alt mr-2" />

@@ -171,9 +171,12 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="investment-form-description">
         <DialogHeader>
           <DialogTitle>Aggiungi Nuovo Investimento</DialogTitle>
+          <p id="investment-form-description" className="text-sm text-slate-600 dark:text-slate-400">
+            Compila i dettagli del nuovo investimento da aggiungere al portfolio
+          </p>
         </DialogHeader>
         
         <Form {...form}>

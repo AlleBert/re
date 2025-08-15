@@ -23,6 +23,7 @@ interface InvestmentFormProps {
 
 export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inputMode, setInputMode] = useState<"quantity" | "total">("quantity");
   const [symbolValidation, setSymbolValidation] = useState<{
     status: 'idle' | 'validating' | 'valid' | 'invalid';
     message?: string;
@@ -34,8 +35,10 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
     isSearching: boolean;
   }>({ query: '', results: [], isSearching: false });
 
-  const form = useForm<InsertInvestment>({
-    resolver: zodResolver(insertInvestmentSchema),
+  const form = useForm<InsertInvestment & { totalAmount?: number }>({
+    resolver: zodResolver(insertInvestmentSchema.extend({
+      totalAmount: insertInvestmentSchema.shape.quantity.optional()
+    })),
     defaultValues: {
       name: "",
       symbol: "",
@@ -43,6 +46,7 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
       quantity: 0,
       avgPrice: 0,
       currentPrice: 0,
+      totalAmount: 0,
       purchaseDate: new Date().toISOString().split('T')[0],
       aliShare: 25,
     },
@@ -110,33 +114,41 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
 
   // Debounced symbol validation
   useEffect(() => {
-    const symbol = form.watch('symbol');
-    const timer = setTimeout(() => {
-      if (symbol) {
-        validateSymbol(symbol);
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'symbol' && value.symbol) {
+        const timer = setTimeout(() => {
+          validateSymbol(value.symbol);
+        }, 1000);
+        return () => clearTimeout(timer);
       }
-    }, 1000);
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
 
-    return () => clearTimeout(timer);
-  }, [form.watch('symbol')]);
-
-  const onSubmit = async (data: InsertInvestment) => {
+  const onSubmit = async (data: InsertInvestment & { totalAmount?: number }) => {
     setIsSubmitting(true);
     try {
-      // Validate symbol before submitting if FMP is available
-      if ((await fmpService.isConfigured()) && symbolValidation.status !== 'valid') {
-        await validateSymbol(data.symbol);
-        if (symbolValidation.status === 'invalid') {
-          throw new Error('Please use a valid symbol');
-        }
+      // Validate symbol before submitting if FMP is available - use sync version for better UX
+      if (fmpService.isConfiguredSync() && symbolValidation.status === 'invalid') {
+        throw new Error('Per favore usa un simbolo valido');
+      }
+
+      // Calculate quantity and price based on input mode
+      let finalData: InsertInvestment = { ...data };
+      delete (finalData as any).totalAmount;
+
+      if (inputMode === "total" && data.totalAmount && data.avgPrice) {
+        finalData.quantity = data.totalAmount / data.avgPrice;
+      } else if (inputMode === "quantity" && data.quantity && data.avgPrice) {
+        // Already set correctly
       }
 
       // Set current price to average price if not provided
-      if (!data.currentPrice) {
-        data.currentPrice = data.avgPrice;
+      if (!finalData.currentPrice) {
+        finalData.currentPrice = finalData.avgPrice;
       }
       
-      LocalStorageService.addInvestment(data);
+      LocalStorageService.addInvestment(finalData);
       form.reset();
       setSymbolValidation({ status: 'idle' });
       setSymbolSearch({ query: '', results: [], isSearching: false });
@@ -144,7 +156,7 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
       onClose();
     } catch (error) {
       console.error("Error adding investment:", error);
-      alert(error instanceof Error ? error.message : "Error adding investment");
+      alert(error instanceof Error ? error.message : "Errore nell'aggiungere l'investimento");
     } finally {
       setIsSubmitting(false);
     }
@@ -161,7 +173,7 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Investment</DialogTitle>
+          <DialogTitle>Aggiungi Nuovo Investimento</DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
@@ -171,9 +183,9 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Asset Name</FormLabel>
+                  <FormLabel>Nome Asset</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Apple Inc." {...field} />
+                    <Input placeholder="es. Apple Inc." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -254,18 +266,19 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>Categoria</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder="Seleziona categoria" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="stocks">Stocks</SelectItem>
+                      <SelectItem value="stocks">Azioni</SelectItem>
                       <SelectItem value="etf">ETF</SelectItem>
-                      <SelectItem value="crypto">Cryptocurrency</SelectItem>
-                      <SelectItem value="bonds">Bonds</SelectItem>
+                      <SelectItem value="crypto">Crypto</SelectItem>
+                      <SelectItem value="bonds">Obbligazioni</SelectItem>
+                      <SelectItem value="commodities">Materie Prime</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -273,59 +286,127 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.0001" 
-                        placeholder="25"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="avgPrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price (€)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        placeholder="175.50"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Input Mode Selection */}
+            <div className="space-y-3">
+              <Label>Modalità Inserimento</Label>
+              <div className="flex space-x-4">
+                <Button
+                  type="button"
+                  variant={inputMode === "quantity" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setInputMode("quantity")}
+                >
+                  Quantità + Prezzo
+                </Button>
+                <Button
+                  type="button"
+                  variant={inputMode === "total" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setInputMode("total")}
+                >
+                  Totale Acquistato
+                </Button>
+              </div>
             </div>
+
+            {/* Dynamic Fields Based on Input Mode */}
+            {inputMode === "quantity" ? (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantità</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.0001" 
+                          placeholder="25"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="avgPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prezzo (€)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="175.50"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="totalAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Totale Acquistato (€)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="4387.50"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="avgPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prezzo (€)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="175.50"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <FormField
               control={form.control}
               name="currentPrice"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current Price (€)</FormLabel>
+                  <FormLabel>Prezzo Corrente (€)</FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 
                       step="0.01" 
-                      placeholder="Leave empty to use purchase price"
+                      placeholder="Lascia vuoto per usare il prezzo di acquisto"
                       {...field}
                       onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     />
@@ -340,7 +421,7 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               name="purchaseDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Purchase Date</FormLabel>
+                  <FormLabel>Data Acquisto</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
@@ -354,7 +435,7 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               name="aliShare"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ali's Share (%)</FormLabel>
+                  <FormLabel>Quota Ali (%)</FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 
@@ -371,10 +452,10 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
 
             <div className="flex space-x-3 pt-4">
               <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-                Cancel
+                Annulla
               </Button>
               <Button type="submit" disabled={isSubmitting} className="flex-1">
-                {isSubmitting ? "Adding..." : "Add Investment"}
+                {isSubmitting ? "Aggiungendo..." : "Aggiungi Investimento"}
               </Button>
             </div>
           </form>

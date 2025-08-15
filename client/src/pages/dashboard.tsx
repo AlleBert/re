@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { User, Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, PieChart } from "lucide-react";
+import { User, Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, PieChart, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -207,12 +207,13 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               )}
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="icon" onClick={toggleTheme}>
+              <Button variant="outline" size="icon" onClick={toggleTheme} className="relative">
                 {theme === "dark" ? (
-                  <i className="fas fa-sun text-yellow-500" />
+                  <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                 ) : (
-                  <i className="fas fa-moon text-blue-400" />
+                  <Moon className="h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                 )}
+                <span className="sr-only">Toggle theme</span>
               </Button>
               <Button variant="outline" onClick={onLogout}>
                 <i className="fas fa-sign-out-alt mr-2" />

@@ -8,7 +8,7 @@ import { fmpService } from "@/services/fmpService";
 
 interface RealTimeStatusProps {
   lastUpdate: number;
-  onManualRefresh?: () => void;
+  onManualRefresh?: () => Promise<void>;
 }
 
 export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusProps) {

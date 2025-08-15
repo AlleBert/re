@@ -11,7 +11,9 @@ import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/theme-provider";
 import { InvestmentForm } from "@/components/investment-form";
 import { MinimalPortfolioChart } from "@/components/minimal-portfolio-chart";
+import { RealTimeStatus } from "@/components/real-time-status";
 import { LocalStorageService } from "@/lib/storage";
+import { realTimePriceService } from "@/services/realTimePriceService";
 import { Investment, Transaction, PortfolioSummary } from "@shared/schema";
 import { User as UserType } from "@/lib/types";
 
@@ -30,10 +32,52 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [newPrice, setNewPrice] = useState("");
   const [historyFilter, setHistoryFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState("30days");
+  const [lastPriceUpdate, setLastPriceUpdate] = useState<number>(0);
 
   useEffect(() => {
     loadData();
-  }, []);
+    
+    // Start real-time price updates if user is admin
+    if (user.isAdmin) {
+      const handlePriceUpdates = (updates: any[]) => {
+        updates.forEach(update => {
+          LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'FMP API');
+        });
+        loadData();
+        setLastPriceUpdate(Date.now());
+      };
+
+      const startUpdates = async () => {
+        await realTimePriceService.startPriceUpdates(investments, handlePriceUpdates);
+      };
+      
+      startUpdates();
+
+      return () => {
+        realTimePriceService.stopPriceUpdates(handlePriceUpdates);
+      };
+    }
+  }, [user.isAdmin, investments.length]);
+
+  // Separate effect to restart price updates when investments change
+  useEffect(() => {
+    if (user.isAdmin && investments.length > 0) {
+      const handlePriceUpdates = (updates: any[]) => {
+        updates.forEach(update => {
+          LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'FMP API');
+        });
+        loadData();
+        setLastPriceUpdate(Date.now());
+      };
+
+      const restartUpdates = async () => {
+        realTimePriceService.stopPriceUpdates();
+        await realTimePriceService.startPriceUpdates(investments, handlePriceUpdates);
+      };
+      
+      restartUpdates();
+    }
+  }, [investments, user.isAdmin]);
 
   const loadData = () => {
     const investmentData = LocalStorageService.getInvestments();
@@ -141,6 +185,26 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <Badge variant="secondary" className="text-xs">
                 {user.role}
               </Badge>
+              {user.isAdmin && (
+                <RealTimeStatus 
+                  lastUpdate={lastPriceUpdate}
+                  onManualRefresh={async () => {
+                    // Force immediate price update
+                    const handlePriceUpdates = (updates: any[]) => {
+                      updates.forEach(update => {
+                        LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'FMP API');
+                      });
+                      loadData();
+                      setLastPriceUpdate(Date.now());
+                    };
+                    
+                    if (investments.length > 0) {
+                      realTimePriceService.stopPriceUpdates();
+                      await realTimePriceService.startPriceUpdates(investments, handlePriceUpdates);
+                    }
+                  }}
+                />
+              )}
             </div>
             <div className="flex items-center space-x-4">
               <Button variant="outline" size="icon" onClick={toggleTheme}>
@@ -335,15 +399,6 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               </Card>
             </div>
 
-            {/* Minimal Portfolio Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Andamento Portfolio</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MinimalPortfolioChart investments={investments} />
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Investments Section */}

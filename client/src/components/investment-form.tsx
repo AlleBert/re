@@ -29,6 +29,11 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
     message?: string;
     data?: any;
   }>({ status: 'idle' });
+  const [nameSearch, setNameSearch] = useState<{
+    query: string;
+    results: any[];
+    isSearching: boolean;
+  }>({ query: '', results: [], isSearching: false });
   const [symbolSearch, setSymbolSearch] = useState<{
     query: string;
     results: any[];
@@ -88,6 +93,27 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
         status: 'invalid',
         message: 'Validation failed'
       });
+    }
+  };
+
+  // Search by company name
+  const searchByName = async (query: string) => {
+    if (!query || query.length < 3) {
+      setNameSearch(prev => ({ ...prev, results: [], isSearching: false }));
+      return;
+    }
+
+    setNameSearch(prev => ({ ...prev, isSearching: true }));
+    
+    try {
+      const results = await realTimePriceService.searchSymbols(query);
+      setNameSearch(prev => ({ 
+        ...prev, 
+        results: results.slice(0, 8), 
+        isSearching: false 
+      }));
+    } catch (error) {
+      setNameSearch(prev => ({ ...prev, results: [], isSearching: false }));
     }
   };
 
@@ -152,6 +178,7 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
       form.reset();
       setSymbolValidation({ status: 'idle' });
       setSymbolSearch({ query: '', results: [], isSearching: false });
+      setNameSearch({ query: '', results: [], isSearching: false });
       onSuccess();
       onClose();
     } catch (error) {
@@ -160,6 +187,13 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const selectFromNameSearch = (selectedAsset: any) => {
+    form.setValue('name', selectedAsset.name);
+    form.setValue('symbol', selectedAsset.symbol);
+    setNameSearch({ query: '', results: [], isSearching: false });
+    validateSymbol(selectedAsset.symbol);
   };
 
   const selectSymbol = (selectedSymbol: any) => {
@@ -171,11 +205,13 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md" aria-describedby="investment-form-description">
-        <DialogHeader>
-          <DialogTitle>Aggiungi Nuovo Investimento</DialogTitle>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="investment-form-description">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-white">
+            Aggiungi Nuovo Investimento
+          </DialogTitle>
           <p id="investment-form-description" className="text-sm text-slate-600 dark:text-slate-400">
-            Compila i dettagli del nuovo investimento da aggiungere al portfolio
+            Cerca e seleziona un asset per aggiungere un nuovo investimento al portfolio
           </p>
         </DialogHeader>
         
@@ -186,9 +222,66 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome Asset</FormLabel>
+                  <FormLabel className="text-base font-medium">Nome Asset</FormLabel>
                   <FormControl>
-                    <Input placeholder="es. Apple Inc." {...field} />
+                    <div className="relative">
+                      <Input 
+                        placeholder="Cerca azienda: es. Apple, Microsoft, Tesla..." 
+                        {...field}
+                        className="pr-10"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          const query = e.target.value;
+                          setNameSearch(prev => ({ ...prev, query }));
+                          if (query.length > 2) {
+                            searchByName(query);
+                          } else {
+                            setNameSearch(prev => ({ ...prev, results: [] }));
+                          }
+                        }}
+                      />
+                      {nameSearch.isSearching ? (
+                        <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-slate-400" />
+                      ) : (
+                        <Search className="absolute right-3 top-3 h-4 w-4 text-slate-400" />
+                      )}
+                      
+                      {/* Name search results */}
+                      {nameSearch.results.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                          {nameSearch.results.map((result, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0 transition-colors"
+                              onClick={() => selectFromNameSearch(result)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="font-semibold text-slate-900 dark:text-white">
+                                    {result.name}
+                                  </div>
+                                  <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center space-x-2">
+                                    <span className="font-mono bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-xs">
+                                      {result.symbol}
+                                    </span>
+                                    <span>{result.exchangeShortName}</span>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    {result.price ? `€${result.price.toFixed(2)}` : ''}
+                                  </div>
+                                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    {result.currency || 'USD'}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -200,18 +293,22 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               name="symbol"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Symbol</FormLabel>
+                  <FormLabel className="text-base font-medium">Simbolo</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input 
-                        placeholder="e.g., AAPL" 
+                        placeholder="es. AAPL, MSFT, TSLA..." 
                         {...field}
+                        className="pr-10 font-mono"
                         onChange={(e) => {
-                          field.onChange(e);
-                          const query = e.target.value;
+                          const value = e.target.value.toUpperCase();
+                          field.onChange(value);
+                          const query = value;
                           setSymbolSearch(prev => ({ ...prev, query }));
                           if (query.length > 1) {
                             searchSymbols(query);
+                          } else {
+                            setSymbolSearch(prev => ({ ...prev, results: [] }));
                           }
                         }}
                       />
@@ -227,22 +324,31 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
                       
                       {/* Symbol search results */}
                       {symbolSearch.results.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
                           {symbolSearch.results.map((result, index) => (
                             <button
                               key={index}
                               type="button"
-                              className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+                              className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-b-0 transition-colors"
                               onClick={() => selectSymbol(result)}
                             >
-                              <div className="font-medium text-slate-900 dark:text-white">
-                                {result.symbol}
-                              </div>
-                              <div className="text-sm text-slate-500 dark:text-slate-400 truncate">
-                                {result.name}
-                              </div>
-                              <div className="text-xs text-slate-400 dark:text-slate-500">
-                                {result.exchangeShortName}
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-semibold text-slate-900 dark:text-white font-mono">
+                                    {result.symbol}
+                                  </div>
+                                  <div className="text-sm text-slate-500 dark:text-slate-400 truncate">
+                                    {result.name}
+                                  </div>
+                                  <div className="text-xs text-slate-400 dark:text-slate-500">
+                                    {result.exchangeShortName}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    {result.price ? `€${result.price.toFixed(2)}` : ''}
+                                  </div>
+                                </div>
                               </div>
                             </button>
                           ))}
@@ -251,10 +357,10 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
                     </div>
                   </FormControl>
                   {symbolValidation.message && (
-                    <div className={`text-sm mt-1 ${
+                    <div className={`text-sm mt-2 p-2 rounded-md ${
                       symbolValidation.status === 'valid' 
-                        ? 'text-green-600 dark:text-green-400' 
-                        : 'text-red-600 dark:text-red-400'
+                        ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+                        : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
                     }`}>
                       {symbolValidation.message}
                     </div>
@@ -290,24 +396,32 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
             />
 
             {/* Input Mode Selection */}
-            <div className="space-y-3">
-              <Label>Modalità Inserimento</Label>
-              <div className="flex space-x-4">
+            <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+              <Label className="text-base font-medium">Modalità Inserimento</Label>
+              <div className="grid grid-cols-2 gap-3">
                 <Button
                   type="button"
                   variant={inputMode === "quantity" ? "default" : "outline"}
-                  size="sm"
+                  size="default"
                   onClick={() => setInputMode("quantity")}
+                  className="h-12 text-sm"
                 >
-                  Quantità + Prezzo
+                  <div className="text-center">
+                    <div className="font-medium">Quantità + Prezzo</div>
+                    <div className="text-xs opacity-70">Inserisci numero azioni e prezzo</div>
+                  </div>
                 </Button>
                 <Button
                   type="button"
                   variant={inputMode === "total" ? "default" : "outline"}
-                  size="sm"
+                  size="default"
                   onClick={() => setInputMode("total")}
+                  className="h-12 text-sm"
                 >
-                  Totale Acquistato
+                  <div className="text-center">
+                    <div className="font-medium">Totale Acquistato</div>
+                    <div className="text-xs opacity-70">Inserisci importo totale speso</div>
+                  </div>
                 </Button>
               </div>
             </div>
@@ -453,12 +567,19 @@ export function InvestmentForm({ open, onClose, onSuccess }: InvestmentFormProps
               )}
             />
 
-            <div className="flex space-x-3 pt-4">
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            <div className="flex space-x-3 pt-6 border-t border-slate-200 dark:border-slate-700">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1 h-11">
                 Annulla
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="flex-1">
-                {isSubmitting ? "Aggiungendo..." : "Aggiungi Investimento"}
+              <Button type="submit" disabled={isSubmitting} className="flex-1 h-11 bg-blue-600 hover:bg-blue-700">
+                {isSubmitting ? (
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Aggiungendo...</span>
+                  </div>
+                ) : (
+                  "Aggiungi Investimento"
+                )}
               </Button>
             </div>
           </form>

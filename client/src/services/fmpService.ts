@@ -32,7 +32,7 @@ interface FMPSearchResult {
 }
 
 class FMPService {
-  private apiKey: string = '2MLb9evPNioyonA4QQ6T4zjhAAWsheKs';
+  private apiKey: string = '';
   private baseUrl = 'https://financialmodelingprep.com/api/v3';
   private initialized: boolean = false;
 

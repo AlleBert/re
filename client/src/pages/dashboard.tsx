@@ -450,8 +450,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     
                     {/* Donut Chart - Right Side */}
                     <div className="flex-shrink-0">
-                      <div className="relative w-48 h-48">
-                        <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 100 100">
+                      <div className="relative w-40 h-40">
+                        <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
                           {(() => {
                             const data = ['stocks', 'etf', 'crypto', 'bonds'].map((category) => {
                               const categoryInvestments = investments.filter(inv => inv.category === category);
@@ -473,8 +473,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                             };
                             
                             let currentAngle = 0;
-                            const radius = 40;
-                            const strokeWidth = 12;
+                            const radius = 35;
+                            const strokeWidth = 10;
                             const center = 50;
                             const circumference = 2 * Math.PI * radius;
                             
@@ -506,6 +506,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                                   }}
                                   onMouseEnter={() => setHoveredCategory(item.category)}
                                   onMouseLeave={() => setHoveredCategory(null)}
+                                  onClick={() => setHoveredCategory(hoveredCategory === item.category ? null : item.category)}
                                 />
                               );
                             });
@@ -513,8 +514,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="text-center">
-                            <div className="text-sm text-slate-600 dark:text-slate-400">Portfolio</div>
-                            <div className="text-xl font-bold text-slate-900 dark:text-white">
+                            <div className="text-xs text-slate-600 dark:text-slate-400">Portfolio</div>
+                            <div className="text-lg font-bold text-slate-900 dark:text-white">
                               {formatCurrency(portfolio?.totalValue || 0)}
                             </div>
                           </div>

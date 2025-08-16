@@ -72,14 +72,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
 
   const chartData = generateChartData();
   
-  // Debug logging
-  console.log('Chart Debug:', {
-    viewMode,
-    currentUser,
-    chartData: chartData.slice(0, 2), // Show first 2 data points
-    dataKeys: Object.keys(chartData[0] || {}),
-    investments: investments.map(i => i.symbol)
-  });
+
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('it-IT', { 
@@ -108,21 +101,28 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
     <div className="space-y-4">
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        {/* View Mode Switch */}
-        <div className="flex items-center space-x-2">
-          <div className={`p-1.5 rounded-md transition-colors ${viewMode === "separate" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`} title="Vista separata - Solo portfolio utente">
+        {/* View Mode Icons */}
+        <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
+          <Button
+            variant={viewMode === "separate" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("separate")}
+            className="h-8 w-8 p-0"
+            title="Vista separata - Solo portfolio utente"
+            data-testid="button-view-separate"
+          >
             <TrendingUp className="h-4 w-4" />
-          </div>
-          <Switch
-            id="view-mode"
-            checked={viewMode === "separate"}
-            onCheckedChange={(checked) => setViewMode(checked ? "separate" : "cumulative")}
-            data-testid="switch-view-mode"
-            className="data-[state=checked]:bg-primary"
-          />
-          <div className={`p-1.5 rounded-md transition-colors ${viewMode === "cumulative" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`} title="Vista cumulata - Tutti i titoli + totale">
+          </Button>
+          <Button
+            variant={viewMode === "cumulative" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("cumulative")}
+            className="h-8 w-8 p-0"
+            title="Vista cumulata - Tutti i titoli + totale"
+            data-testid="button-view-cumulative"
+          >
             <BarChart3 className="h-4 w-4" />
-          </div>
+          </Button>
         </div>
         
         {/* Period Buttons */}
@@ -194,6 +194,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                 dataKey="userPortfolio"
                 stroke="hsl(var(--primary))"
                 strokeWidth={3}
+                strokeOpacity={1}
                 dot={false}
                 activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
               />
@@ -218,6 +219,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                   dataKey="portfolio"
                   stroke="hsl(var(--primary))"
                   strokeWidth={4}
+                  strokeOpacity={1}
                   dot={false}
                   activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
                 />

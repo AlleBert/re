@@ -75,7 +75,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     },
   });
 
-  // Validate symbol with FMP API
+  // Validate symbol with Finnhub API
   const validateSymbol = async (symbol: string) => {
     if (!symbol || symbol.length < 1) {
       setSymbolValidation({ status: 'idle' });
@@ -85,9 +85,9 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     setSymbolValidation({ status: 'validating' });
     
     try {
-      const result = await realTimePriceService.validateAndGetPrice(symbol);
+      const result = await finnhubService.getQuote(symbol);
       
-      if (result.valid && result.price && result.name) {
+      if (result && result.price && result.name) {
         setSymbolValidation({
           status: 'valid',
           message: `${result.name} - Current price: €${result.price.toFixed(2)}`,
@@ -103,7 +103,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       } else {
         setSymbolValidation({
           status: 'invalid',
-          message: result.error || 'Symbol not found'
+          message: 'Symbol not found'
         });
       }
     } catch (error) {
@@ -124,7 +124,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     setIsinValidation({ status: 'validating' });
     
     try {
-      const result = await realTimePriceService.validateISIN(isin);
+      const result = await finnhubService.validateISIN(isin);
       
       if (result.valid && result.symbol && result.name) {
         setIsinValidation({
@@ -160,7 +160,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     setNameSearch(prev => ({ ...prev, isSearching: true }));
     
     try {
-      const results = await realTimePriceService.searchSymbols(query);
+      const results = await finnhubService.searchSymbol(query);
       setNameSearch(prev => ({ 
         ...prev, 
         results: results.slice(0, 8), 
@@ -181,7 +181,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     setSymbolSearch(prev => ({ ...prev, isSearching: true }));
     
     try {
-      const results = await realTimePriceService.searchSymbols(query);
+      const results = await finnhubService.searchSymbol(query);
       setSymbolSearch(prev => ({ 
         ...prev, 
         results: results.slice(0, 5), 
@@ -257,6 +257,11 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
   const selectFromNameSearch = (selectedAsset: any) => {
     form.setValue('name', selectedAsset.name);
     form.setValue('symbol', selectedAsset.symbol);
+    // If the asset has an ISIN, set it and validate
+    if (selectedAsset.isin) {
+      form.setValue('isin', selectedAsset.isin);
+      validateISIN(selectedAsset.isin);
+    }
     setNameSearch({ query: '', results: [], isSearching: false });
     validateSymbol(selectedAsset.symbol);
   };
@@ -264,6 +269,11 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
   const selectSymbol = (selectedSymbol: any) => {
     form.setValue('symbol', selectedSymbol.symbol);
     form.setValue('name', selectedSymbol.name);
+    // If the symbol has an ISIN, set it and validate
+    if (selectedSymbol.isin) {
+      form.setValue('isin', selectedSymbol.isin);
+      validateISIN(selectedSymbol.isin);
+    }
     setSymbolSearch({ query: '', results: [], isSearching: false });
     validateSymbol(selectedSymbol.symbol);
   };
@@ -291,7 +301,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                   <FormControl>
                     <div className="relative">
                       <Input 
-                        placeholder="Cerca azienda: es. Apple, Microsoft, Tesla..." 
+                        placeholder="Cerca asset: es. Apple, Bitcoin, VWCE ETF..." 
                         {...field}
                         className="pr-10"
                         onChange={(e) => {
@@ -330,6 +340,13 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                                     <span className="font-mono bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-xs">
                                       {result.symbol}
                                     </span>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                      result.type === 'ETF' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' :
+                                      result.type === 'Crypto' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' :
+                                      'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                                    }`}>
+                                      {result.type}
+                                    </span>
                                     <span>{result.exchangeShortName}</span>
                                   </div>
                                 </div>
@@ -362,7 +379,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                   <FormControl>
                     <div className="relative">
                       <Input 
-                        placeholder="es. AAPL, MSFT, TSLA..." 
+                        placeholder="es. AAPL, BTC-USD, VWCE..." 
                         {...field}
                         className="pr-10 font-mono"
                         onChange={(e) => {
@@ -405,8 +422,15 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                                   <div className="text-sm text-slate-500 dark:text-slate-400 truncate">
                                     {result.name}
                                   </div>
-                                  <div className="text-xs text-slate-400 dark:text-slate-500">
-                                    {result.exchangeShortName}
+                                  <div className="text-xs text-slate-400 dark:text-slate-500 flex items-center space-x-2">
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                      result.type === 'ETF' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' :
+                                      result.type === 'Crypto' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' :
+                                      'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                                    }`}>
+                                      {result.type}
+                                    </span>
+                                    <span>{result.exchangeShortName}</span>
                                   </div>
                                 </div>
                                 <div className="text-right">

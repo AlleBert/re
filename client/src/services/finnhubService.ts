@@ -160,27 +160,17 @@ class FinnhubService {
     }
   }
 
-  async validateISIN(isin: string): Promise<{ valid: boolean; symbol?: string; name?: string }> {
+  async validateISIN(isin: string): Promise<{ valid: boolean; symbol?: string; name?: string; error?: string }> {
     try {
-      // Basic ISIN format validation
-      if (!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(isin)) {
-        return { valid: false };
-      }
-
-      const results = await this.searchByISIN(isin);
-      if (results.length > 0) {
-        return {
-          valid: true,
-          symbol: results[0].symbol,
-          name: results[0].name
-        };
-      }
-      return { valid: false };
+      const validation = await this.makeRequest<{ valid: boolean; symbol?: string; name?: string; error?: string }>(`/isin/${isin.toUpperCase()}`, {});
+      return validation;
     } catch (error) {
       console.error(`ISIN validation failed for ${isin}:`, error);
-      return { valid: false };
+      return { valid: false, error: 'Validation service error' };
     }
   }
+
+
 
   async isConfigured(): Promise<boolean> {
     try {

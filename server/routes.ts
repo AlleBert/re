@@ -17,6 +17,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!query) {
         return res.status(400).json({ error: "Query parameter required" });
       }
+      // Enhanced search that includes stocks, ETFs, and crypto
       const results = await serverFinnhubService.searchSymbol(query);
       res.json(results);
     } catch (error) {
@@ -58,6 +59,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/finnhub/status", (req, res) => {
     res.json({ configured: serverFinnhubService.isConfigured() });
+  });
+
+  // ISIN lookup endpoint
+  app.get("/api/finnhub/isin/:isin", async (req, res) => {
+    try {
+      const isin = req.params.isin;
+      if (!isin) {
+        return res.status(400).json({ error: "ISIN parameter required" });
+      }
+      const result = await serverFinnhubService.lookupByISIN(isin);
+      res.json(result);
+    } catch (error) {
+      console.error("ISIN lookup error:", error);
+      res.status(500).json({ error: "ISIN lookup failed" });
+    }
   });
 
   // use storage to perform CRUD operations on the storage interface

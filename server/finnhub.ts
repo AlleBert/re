@@ -71,24 +71,125 @@ class ServerFinnhubService {
 
   async searchSymbol(query: string) {
     try {
-      const data = await this.makeRequest<FinnhubSymbolLookup>('/search', { q: query });
-      
-      if (!data?.result) return [];
+      // Search across multiple exchanges to include stocks, ETFs, and crypto
+      const promises = [
+        // US markets (stocks, ETFs)
+        this.makeRequest<FinnhubSymbolLookup>('/search', { q: query }),
+        // Crypto search
+        this.searchCrypto(query)
+      ];
 
-      return data.result
-        .filter(item => item.symbol && item.description)
-        .map((item) => ({
-          symbol: item.displaySymbol || item.symbol,
-          name: item.description,
-          currency: 'USD',
-          stockExchange: '',
-          exchangeShortName: '',
-          type: item.type || 'Common Stock'
-        }))
-        .slice(0, 10);
+      const [stockResults, cryptoResults] = await Promise.allSettled(promises);
+      
+      let allResults: any[] = [];
+
+      // Add stock/ETF results
+      if (stockResults.status === 'fulfilled' && stockResults.value?.result) {
+        const filtered = stockResults.value.result
+          .filter((item: any) => item.symbol && item.description)
+          .map((item: any) => ({
+            symbol: item.displaySymbol || item.symbol,
+            name: item.description,
+            currency: 'USD',
+            stockExchange: '',
+            exchangeShortName: '',
+            type: this.categorizeSymbol(item.symbol, item.description)
+          }));
+        allResults.push(...filtered);
+      }
+
+      // Add crypto results
+      if (cryptoResults.status === 'fulfilled' && Array.isArray(cryptoResults.value)) {
+        allResults.push(...cryptoResults.value);
+      }
+
+      // Remove duplicates and limit results
+      const uniqueResults = allResults.filter((item, index, self) => 
+        index === self.findIndex(t => t.symbol === item.symbol)
+      );
+
+      return uniqueResults.slice(0, 15);
     } catch (error) {
       console.error('Symbol search failed:', error);
       return [];
+    }
+  }
+
+  private async searchCrypto(query: string) {
+    try {
+      // Get crypto symbols - Finnhub provides crypto data
+      const cryptoData = await this.makeRequest<any>('/crypto/symbol', { exchange: 'binance' });
+      
+      if (!Array.isArray(cryptoData)) return [];
+
+      // Filter crypto symbols that match the query
+      const matches = cryptoData
+        .filter((crypto: any) => 
+          crypto.symbol?.toLowerCase().includes(query.toLowerCase()) ||
+          crypto.description?.toLowerCase().includes(query.toLowerCase())
+        )
+        .slice(0, 5)
+        .map((crypto: any) => ({
+          symbol: crypto.symbol,
+          name: crypto.description || crypto.symbol,
+          currency: 'USD',
+          stockExchange: 'Binance',
+          exchangeShortName: 'BINANCE',
+          type: 'Crypto'
+        }));
+
+      return matches;
+    } catch (error) {
+      console.error('Crypto search failed:', error);
+      return [];
+    }
+  }
+
+  private categorizeSymbol(symbol: string, description: string): string {
+    const symbolUpper = symbol.toUpperCase();
+    const descUpper = description.toUpperCase();
+    
+    // ETF detection
+    if (descUpper.includes('ETF') || descUpper.includes('FUND') || 
+        descUpper.includes('INDEX') || symbolUpper.includes('ETF')) {
+      return 'ETF';
+    }
+    
+    // Check if it's a crypto symbol pattern
+    if (symbolUpper.includes('USD') || symbolUpper.includes('BTC') || 
+        symbolUpper.includes('ETH') || symbolUpper.endsWith('USDT')) {
+      return 'Crypto';
+    }
+    
+    return 'Common Stock';
+  }
+
+  async lookupByISIN(isin: string) {
+    try {
+      // Basic ISIN format validation
+      if (!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(isin)) {
+        return { valid: false, error: 'Invalid ISIN format' };
+      }
+
+      // For now, we'll search using the ISIN as a query to see if we can find matching securities
+      // In a real implementation, you'd need a service that provides ISIN-to-symbol mapping
+      const searchResults = await this.searchSymbol(isin);
+      
+      if (searchResults.length > 0) {
+        const match = searchResults[0];
+        return {
+          valid: true,
+          symbol: match.symbol,
+          name: match.name,
+          currency: match.currency,
+          exchange: match.stockExchange
+        };
+      }
+
+      return { valid: false, error: 'ISIN not found in available databases' };
+    } catch (error) {
+      console.error('ISIN lookup failed:', error);
+      return { valid: false, error: 'ISIN lookup service error' };
     }
   }
 

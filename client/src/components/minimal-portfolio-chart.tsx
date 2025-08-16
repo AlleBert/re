@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { BarChart3, TrendingUp } from "lucide-react";
 import { Investment } from "@shared/schema";
 
 interface MinimalPortfolioChartProps {
@@ -85,19 +85,20 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* View Mode Switch */}
-        <div className="flex items-center space-x-3">
-          <Label htmlFor="view-mode" className="text-sm font-medium">
-            Cumulata
-          </Label>
+        <div className="flex items-center space-x-2">
+          <div className={`p-1.5 rounded-md transition-colors ${viewMode === "cumulative" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            <TrendingUp className="h-4 w-4" />
+          </div>
           <Switch
             id="view-mode"
             checked={viewMode === "separate"}
             onCheckedChange={(checked) => setViewMode(checked ? "separate" : "cumulative")}
             data-testid="switch-view-mode"
+            className="data-[state=checked]:bg-primary"
           />
-          <Label htmlFor="view-mode" className="text-sm font-medium">
-            Separata
-          </Label>
+          <div className={`p-1.5 rounded-md transition-colors ${viewMode === "separate" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            <BarChart3 className="h-4 w-4" />
+          </div>
         </div>
         
         {/* Period Buttons */}

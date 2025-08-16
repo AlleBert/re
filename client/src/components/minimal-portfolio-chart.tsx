@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Investment } from "@shared/schema";
 
 interface MinimalPortfolioChartProps {
@@ -83,26 +84,37 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
     <div className="space-y-4">
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as any)}>
-          <ToggleGroupItem value="cumulative" aria-label="Vista cumulata">
+        {/* View Mode Switch */}
+        <div className="flex items-center space-x-3">
+          <Label htmlFor="view-mode" className="text-sm font-medium">
             Cumulata
-          </ToggleGroupItem>
-          <ToggleGroupItem value="separate" aria-label="Vista separata">
+          </Label>
+          <Switch
+            id="view-mode"
+            checked={viewMode === "separate"}
+            onCheckedChange={(checked) => setViewMode(checked ? "separate" : "cumulative")}
+            data-testid="switch-view-mode"
+          />
+          <Label htmlFor="view-mode" className="text-sm font-medium">
             Separata
-          </ToggleGroupItem>
-        </ToggleGroup>
+          </Label>
+        </div>
         
-        <ToggleGroup type="single" value={period} onValueChange={(value) => value && setPeriod(value as any)}>
-          <ToggleGroupItem value="7d" aria-label="7 giorni">
-            7G
-          </ToggleGroupItem>
-          <ToggleGroupItem value="30d" aria-label="30 giorni">
-            30G
-          </ToggleGroupItem>
-          <ToggleGroupItem value="90d" aria-label="90 giorni">
-            90G
-          </ToggleGroupItem>
-        </ToggleGroup>
+        {/* Period Buttons */}
+        <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
+          {(["7d", "30d", "90d"] as const).map((p) => (
+            <Button
+              key={p}
+              variant={period === p ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriod(p)}
+              className="h-8 px-3 text-xs"
+              data-testid={`button-period-${p}`}
+            >
+              {p === "7d" ? "7G" : p === "30d" ? "30G" : "90G"}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Chart */}

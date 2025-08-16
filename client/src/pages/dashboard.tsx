@@ -384,35 +384,47 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   <CardTitle>Asset Allocation</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {['stocks', 'etf', 'crypto', 'bonds'].map((category) => {
-                      const categoryInvestments = investments.filter(inv => inv.category === category);
-                      const categoryValue = categoryInvestments.reduce((sum, inv) => 
-                        sum + (inv.quantity * inv.currentPrice), 0
-                      );
-                      const percentage = portfolio ? (categoryValue / portfolio.totalValue) * 100 : 0;
-                      
-                      if (percentage === 0) return null;
-                      
-                      return (
-                        <div key={category}>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-slate-600 dark:text-slate-400 capitalize">
-                              {category}
-                            </span>
-                            <span className="text-sm font-medium text-slate-900 dark:text-white">
-                              {percentage.toFixed(1)}%
-                            </span>
+                  <div className="flex flex-col items-center space-y-4">
+                    {/* Simple circular indicators */}
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                      {['stocks', 'etf', 'crypto', 'bonds'].map((category) => {
+                        const categoryInvestments = investments.filter(inv => inv.category === category);
+                        const categoryValue = categoryInvestments.reduce((sum, inv) => 
+                          sum + (inv.quantity * inv.currentPrice), 0
+                        );
+                        const percentage = portfolio ? (categoryValue / portfolio.totalValue) * 100 : 0;
+                        
+                        if (percentage === 0) return null;
+                        
+                        const getCategoryInfo = (cat: string) => {
+                          const infoMap: Record<string, { icon: string; name: string; color: string }> = {
+                            stocks: { icon: '📈', name: 'Azioni', color: 'bg-blue-500' },
+                            etf: { icon: '📊', name: 'ETF', color: 'bg-green-500' },
+                            crypto: { icon: '₿', name: 'Crypto', color: 'bg-orange-500' },
+                            bonds: { icon: '🏦', name: 'Obbligazioni', color: 'bg-purple-500' },
+                          };
+                          return infoMap[cat] || { icon: '💰', name: cat, color: 'bg-gray-500' };
+                        };
+                        
+                        const info = getCategoryInfo(category);
+                        
+                        return (
+                          <div key={category} className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-700">
+                            <div className={`w-10 h-10 ${info.color} rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg`}>
+                              {info.icon}
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-slate-900 dark:text-white text-sm">
+                                {info.name}
+                              </div>
+                              <div className="text-lg font-bold text-slate-700 dark:text-slate-300">
+                                {percentage.toFixed(1)}%
+                              </div>
+                            </div>
                           </div>
-                          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${getCategoryColor(category)}`}
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

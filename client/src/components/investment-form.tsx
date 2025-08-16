@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertInvestmentSchema, type InsertInvestment, type Investment } from "@shared/schema";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,18 +50,21 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
   }>({ status: 'idle' });
 
   const form = useForm<InsertInvestment & { totalAmount?: number }>({
+    // Use a lenient schema and handle validation in onSubmit
     resolver: zodResolver(insertInvestmentSchema.extend({
-      totalAmount: insertInvestmentSchema.shape.quantity.optional()
-    })),
+      totalAmount: z.number().optional(),
+      quantity: z.number().optional(), // Make both fields optional in schema
+    }).partial({ quantity: true, totalAmount: true })), // Allow partial data
+    mode: "onChange", // Enable real-time validation
     defaultValues: editingInvestment ? {
       name: editingInvestment.name || "",
       symbol: editingInvestment.symbol || "",
       isin: editingInvestment.isin || "",
       category: editingInvestment.category || "stocks",
-      quantity: editingInvestment.quantity || 0,
+      quantity: editingInvestment.quantity || undefined,
       avgPrice: editingInvestment.avgPrice || 0,
       currentPrice: editingInvestment.currentPrice || 0,
-      totalAmount: 0,
+      totalAmount: undefined,
       purchaseDate: editingInvestment.purchaseDate || new Date().toISOString().split('T')[0],
       aliShare: editingInvestment.aliShare || 25,
     } : {
@@ -68,10 +72,10 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       symbol: "",
       isin: "",
       category: "stocks",
-      quantity: 0,
+      quantity: undefined,
       avgPrice: 0,
       currentPrice: 0,
-      totalAmount: 0,
+      totalAmount: undefined,
       purchaseDate: new Date().toISOString().split('T')[0],
       aliShare: 25,
     },
@@ -258,6 +262,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     console.log('📝 FORM: Starting form submission with data:', data);
     console.log('🔍 FORM: Form errors before submit:', form.formState.errors);
     console.log('📋 FORM: Form is valid:', form.formState.isValid);
+    console.log('🎯 FORM: Current input mode:', inputMode);
     setIsSubmitting(true);
     try {
       // Validate symbol before submitting if validation failed
@@ -271,6 +276,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
 
       if (inputMode === "total") {
         // Modalità totale acquistato: calcola quantità
+        console.log('💰 FORM: Using total amount mode with totalAmount:', data.totalAmount);
         if (!data.totalAmount || data.totalAmount <= 0) {
           throw new Error('Per favore inserisci il totale acquistato');
         }
@@ -278,8 +284,10 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
           throw new Error('Per favore inserisci il prezzo per azione');
         }
         finalData.quantity = data.totalAmount / data.avgPrice;
+        console.log('📊 FORM: Calculated quantity:', finalData.quantity);
       } else {
         // Modalità quantità + prezzo: usa valori diretti
+        console.log('🔢 FORM: Using quantity mode with quantity:', data.quantity);
         if (!data.quantity || data.quantity <= 0) {
           throw new Error('Per favore inserisci la quantità');
         }
@@ -292,7 +300,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       finalData.currentPrice = finalData.avgPrice;
       
       // Debug: Log the data being sent
-      console.log('Sending investment data:', finalData);
+      console.log('💾 FORM: Final data to be sent:', finalData);
       
       if (editingInvestment) {
         // Update existing investment via API
@@ -302,7 +310,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
         });
       } else {
         // Add new investment via API
-        console.log('💾 FORM: About to create investment with finalData:', finalData);
+        console.log('🚀 FORM: About to create investment with finalData:', finalData);
         const result = await createInvestmentMutation.mutateAsync(finalData);
         console.log('🎉 FORM: Investment creation result:', result);
       }
@@ -315,7 +323,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Error saving investment:", error);
+      console.error("❌ FORM: Error saving investment:", error);
       alert(error instanceof Error ? error.message : "Errore nel salvare l'investimento");
     } finally {
       setIsSubmitting(false);
@@ -608,8 +616,11 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                   size="default"
                   onClick={() => {
                     setInputMode("quantity");
-                    // Reset conflicting fields
+                    // Reset conflicting fields and update validation
                     form.setValue('totalAmount', 0);
+                    form.clearErrors('totalAmount');
+                    // Re-validate with new schema
+                    form.trigger();
                   }}
                   className="h-12 text-sm"
                 >
@@ -624,8 +635,11 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                   size="default"
                   onClick={() => {
                     setInputMode("total");
-                    // Reset conflicting fields
+                    // Reset conflicting fields and update validation
                     form.setValue('quantity', 0);
+                    form.clearErrors('quantity');
+                    // Re-validate with new schema
+                    form.trigger();
                   }}
                   className="h-12 text-sm"
                 >

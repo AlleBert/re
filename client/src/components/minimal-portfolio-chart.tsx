@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { BarChart3, TrendingUp } from "lucide-react";
+import { User, Users } from "lucide-react";
 import { Investment } from "@shared/schema";
 
 interface MinimalPortfolioChartProps {
@@ -168,7 +168,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
             title="Vista separata - Solo portfolio utente"
             data-testid="button-view-separate"
           >
-            <TrendingUp className="h-4 w-4" />
+            <User className="h-4 w-4" />
           </Button>
           <Button
             variant={viewMode === "cumulative" ? "default" : "ghost"}
@@ -178,7 +178,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
             title="Vista cumulata - Tutti i titoli + totale"
             data-testid="button-view-cumulative"
           >
-            <BarChart3 className="h-4 w-4" />
+            <Users className="h-4 w-4" />
           </Button>
         </div>
         

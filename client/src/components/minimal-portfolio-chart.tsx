@@ -12,13 +12,13 @@ interface MinimalPortfolioChartProps {
 
 export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: MinimalPortfolioChartProps) {
   const [viewMode, setViewMode] = useState<"cumulative" | "separate">("cumulative");
-  const [period, setPeriod] = useState<"1d" | "7d" | "30d" | "90d">("30d");
+  const [period, setPeriod] = useState<"1d" | "7d" | "30d" | "90d" | "1y">("30d");
 
   const generateChartData = () => {
     // Punti per i dati: molti più punti per dettaglio della linea
-    const dataPoints = period === "1d" ? 48 : period === "7d" ? 7 : period === "30d" ? 30 : 90;
+    const dataPoints = period === "1d" ? 48 : period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 365;
     // Punti per le etichette X: pochi per evitare sovrapposizioni
-    const labelPoints = period === "1d" ? 8 : period === "7d" ? 7 : period === "30d" ? 10 : 12;
+    const labelPoints = period === "1d" ? 8 : period === "7d" ? 7 : period === "30d" ? 10 : period === "90d" ? 12 : 15;
     const data = [];
     
     const totalValue = investments.reduce((sum, inv) => sum + (inv.quantity * inv.currentPrice), 0);
@@ -48,9 +48,13 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
               ? (i % 3 === 0 || i === 0) // ogni 3 giorni
                 ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
                 : ''
-              : (i % 8 === 0 || i === 0) // ogni 8 giorni
-                ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
-                : '',
+              : period === "90d"
+                ? (i % 8 === 0 || i === 0) // ogni 8 giorni
+                  ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+                  : ''
+                : (i % 24 === 0 || i === 0) // ogni 24 giorni per 1y
+                  ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+                  : '',
         // Per il tooltip, sempre mostra la data completa
         fullDate: period === "1d" 
           ? date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
@@ -90,6 +94,23 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
   };
 
   const chartData = generateChartData();
+  
+  // Calcola la performance percentuale del periodo
+  const calculatePeriodPerformance = () => {
+    if (chartData.length < 2) return 0;
+    
+    const firstValue = viewMode === "separate" 
+      ? chartData[0].userPortfolio 
+      : chartData[0].portfolio || 0;
+    const lastValue = viewMode === "separate" 
+      ? chartData[chartData.length - 1].userPortfolio 
+      : chartData[chartData.length - 1].portfolio || 0;
+    
+    if (firstValue === 0) return 0;
+    return ((lastValue - firstValue) / firstValue) * 100;
+  };
+  
+  const periodPerformance = calculatePeriodPerformance();
   
 
   
@@ -146,7 +167,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
         
         {/* Period Buttons */}
         <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
-          {(["1d", "7d", "30d", "90d"] as const).map((p) => (
+          {(["1d", "7d", "30d", "90d", "1y"] as const).map((p) => (
             <Button
               key={p}
               variant={period === p ? "default" : "ghost"}
@@ -155,9 +176,23 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
               className="h-8 px-3 text-xs"
               data-testid={`button-period-${p}`}
             >
-              {p === "1d" ? "1G" : p === "7d" ? "7G" : p === "30d" ? "30G" : "90G"}
+              {p === "1d" ? "1G" : p === "7d" ? "7G" : p === "30d" ? "30G" : p === "90d" ? "90G" : "1A"}
             </Button>
           ))}
+        </div>
+      </div>
+
+      {/* Performance Badge */}
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-sm text-slate-600 dark:text-slate-400">
+          Performance {period === "1d" ? "giornaliera" : period === "7d" ? "settimanale" : period === "30d" ? "mensile" : period === "90d" ? "trimestrale" : "annuale"}:
+        </div>
+        <div className={`text-lg font-bold px-3 py-1 rounded-lg ${
+          periodPerformance >= 0 
+            ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' 
+            : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
+        }`}>
+          {periodPerformance >= 0 ? '+' : ''}{periodPerformance.toFixed(2)}%
         </div>
       </div>
 

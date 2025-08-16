@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { getClientConfig, config } from "./config";
 import { serverFinnhubService } from "./finnhub";
+import { multiProviderService } from "./multiProvider";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configuration endpoint for client environment variables
@@ -34,31 +35,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!symbol) {
         return res.status(400).json({ error: "Symbol parameter required" });
       }
-      const quote = await serverFinnhubService.getQuote(symbol);
+      
+      // Use multi-provider service for better European market coverage
+      const quote = await multiProviderService.getQuote(symbol);
       if (!quote) {
-        // For European symbols, return a placeholder response instead of 404
-        if (symbol.toUpperCase().includes('.L') || symbol.toUpperCase().includes('.PA') || symbol.toUpperCase().includes('.MI')) {
-          return res.json({
-            symbol: symbol.toUpperCase(),
-            name: symbol.toUpperCase(),
-            price: 0,
-            changesPercentage: 0,
-            change: 0,
-            dayLow: 0,
-            dayHigh: 0,
-            open: 0,
-            previousClose: 0,
-            currency: symbol.toUpperCase().endsWith('.L') ? 'GBP' : 'EUR',
-            exchange: symbol.toUpperCase().endsWith('.L') ? 'London Stock Exchange' : 'European Exchange',
-            error: 'Real-time price data not available for this market in the free tier. You can still track this investment with manual price updates.'
-          });
-        }
-        return res.status(404).json({ error: "Quote not found" });
+        return res.status(404).json({ error: "Quote not found from any provider" });
       }
+      
+      // Log which provider was used for debugging
+      if (quote.provider) {
+        console.log(`Quote for ${symbol} provided by: ${quote.provider}`);
+      }
+      
       res.json(quote);
     } catch (error) {
-      console.error("Finnhub quote error:", error);
-      res.status(500).json({ error: "Quote fetch failed" });
+      console.error("Multi-provider quote error:", error);
+      res.status(500).json({ error: "Quote fetch failed from all providers" });
     }
   });
 

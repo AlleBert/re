@@ -192,6 +192,10 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     return `${sign}${value.toFixed(2)}%`;
   };
 
+  const formatQuantity = (quantity: number) => {
+    return Math.floor(quantity * 100) / 100;
+  };
+
   const getGainLossColor = (value: number) => {
     return value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
   };
@@ -802,7 +806,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{investment.quantity}</TableCell>
+                        <TableCell>{formatQuantity(investment.quantity)}</TableCell>
                         <TableCell>{formatCurrency(investment.avgPrice)}</TableCell>
                         <TableCell>
                           <span>{formatCurrency(investment.currentPrice)}</span>
@@ -922,7 +926,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                       </TableCell>
                       <TableCell>{transaction.assetSymbol}</TableCell>
                       <TableCell>
-                        {transaction.quantity !== undefined ? transaction.quantity : '-'}
+                        {transaction.quantity !== undefined ? formatQuantity(transaction.quantity) : '-'}
                       </TableCell>
                       <TableCell>{formatCurrency(transaction.price)}</TableCell>
                       <TableCell>
@@ -971,7 +975,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   {sellDialog.investment.name} ({sellDialog.investment.symbol})
                 </div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">
-                  Possedute: {sellDialog.investment.quantity} unità a {formatCurrency(sellDialog.investment.avgPrice)}
+                  Possedute: {formatQuantity(sellDialog.investment.quantity)} unità a {formatCurrency(sellDialog.investment.avgPrice)}
                 </div>
               </div>
               
@@ -988,7 +992,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     step="0.01"
                   />
                   <div className="text-xs text-slate-500 dark:text-slate-400">
-                    Max: {sellDialog.investment.quantity}
+                    Max: {formatQuantity(sellDialog.investment.quantity)}
                   </div>
                 </div>
                 
@@ -1014,7 +1018,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     Totale vendita: {formatCurrency(parseFloat(sellQuantity) * parseFloat(sellPrice))}
                   </div>
                   <div className="text-xs text-green-600 dark:text-green-400">
-                    {parseFloat(sellQuantity)} × {formatCurrency(parseFloat(sellPrice))}
+                    {formatQuantity(parseFloat(sellQuantity))} × {formatCurrency(parseFloat(sellPrice))}
                   </div>
                 </div>
               )}

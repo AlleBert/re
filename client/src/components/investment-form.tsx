@@ -220,8 +220,20 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
   // Mutations for API calls
   const createInvestmentMutation = useMutation({
     mutationFn: async (data: InsertInvestment) => {
-      const response = await apiRequest('POST', '/api/investments', data);
-      return response.json();
+      console.log('🚀 CLIENT: Starting API request with data:', data);
+      try {
+        const response = await apiRequest('POST', '/api/investments', data);
+        console.log('📡 CLIENT: Got response:', response.status, response.statusText);
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
+        const result = await response.json();
+        console.log('✅ CLIENT: Parsed result:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ CLIENT: Mutation failed:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       // Invalidate and refetch investments
@@ -243,6 +255,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
   });
 
   const onSubmit = async (data: InsertInvestment & { totalAmount?: number }) => {
+    console.log('📝 FORM: Starting form submission with data:', data);
     setIsSubmitting(true);
     try {
       // Validate symbol before submitting if validation failed
@@ -287,9 +300,9 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
         });
       } else {
         // Add new investment via API
-        console.log('About to create investment with data:', finalData);
+        console.log('💾 FORM: About to create investment with finalData:', finalData);
         const result = await createInvestmentMutation.mutateAsync(finalData);
-        console.log('Investment creation result:', result);
+        console.log('🎉 FORM: Investment creation result:', result);
       }
 
       form.reset();

@@ -1,4 +1,4 @@
-import { User } from "lucide-react";
+import { User, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,11 +56,12 @@ export default function Login({ onLogin }: LoginProps) {
               size="icon"
               onClick={toggleTheme}
               className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600"
+              data-testid="button-theme-toggle"
             >
               {theme === "dark" ? (
-                <i className="fas fa-sun text-yellow-500" />
+                <Sun className="h-4 w-4 text-yellow-500" />
               ) : (
-                <i className="fas fa-moon text-blue-400" />
+                <Moon className="h-4 w-4 text-blue-400" />
               )}
             </Button>
           </div>

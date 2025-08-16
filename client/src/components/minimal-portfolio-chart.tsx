@@ -42,13 +42,13 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
       };
 
       if (viewMode === "separate") {
-        // Generate only user-specific data for separate view
+        // SEPARATE VIEW: Generate only user-specific data
         const trend = Math.sin(i / points * Math.PI) * 0.12;
         const randomVariation = (Math.random() - 0.5) * 0.08;
         const historicalValue = userValue * (1 + trend + randomVariation * (i / points));
         dataPoint.userPortfolio = Math.max(historicalValue, userValue * 0.88);
       } else {
-        // Generate individual investments data for cumulative view
+        // CUMULATIVE VIEW: Generate individual investments + total portfolio
         investments.forEach((investment, index) => {
           const investmentValue = investment.quantity * investment.currentPrice;
           const trend = Math.sin((i / points + index * 0.5) * Math.PI) * 0.15;
@@ -71,6 +71,15 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
   };
 
   const chartData = generateChartData();
+  
+  // Debug logging
+  console.log('Chart Debug:', {
+    viewMode,
+    currentUser,
+    chartData: chartData.slice(0, 2), // Show first 2 data points
+    dataKeys: Object.keys(chartData[0] || {}),
+    investments: investments.map(i => i.symbol)
+  });
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('it-IT', { 
@@ -101,7 +110,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* View Mode Switch */}
         <div className="flex items-center space-x-2">
-          <div className={`p-1.5 rounded-md transition-colors ${viewMode === "cumulative" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+          <div className={`p-1.5 rounded-md transition-colors ${viewMode === "separate" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`} title="Vista separata - Solo portfolio utente">
             <TrendingUp className="h-4 w-4" />
           </div>
           <Switch
@@ -111,7 +120,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
             data-testid="switch-view-mode"
             className="data-[state=checked]:bg-primary"
           />
-          <div className={`p-1.5 rounded-md transition-colors ${viewMode === "separate" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+          <div className={`p-1.5 rounded-md transition-colors ${viewMode === "cumulative" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`} title="Vista cumulata - Tutti i titoli + totale">
             <BarChart3 className="h-4 w-4" />
           </div>
         </div>

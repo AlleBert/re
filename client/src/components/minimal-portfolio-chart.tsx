@@ -15,59 +15,71 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
   const [period, setPeriod] = useState<"1d" | "7d" | "30d" | "90d">("30d");
 
   const generateChartData = () => {
-    // Ottimizziamo i punti per avere etichette più pulite e distanziate
-    const points = period === "1d" ? 8 : period === "7d" ? 7 : period === "30d" ? 10 : 12;
+    // Punti per i dati: molti più punti per dettaglio della linea
+    const dataPoints = period === "1d" ? 48 : period === "7d" ? 7 : period === "30d" ? 30 : 90;
+    // Punti per le etichette X: pochi per evitare sovrapposizioni
+    const labelPoints = period === "1d" ? 8 : period === "7d" ? 7 : period === "30d" ? 10 : 12;
     const data = [];
     
     const totalValue = investments.reduce((sum, inv) => sum + (inv.quantity * inv.currentPrice), 0);
     const currentUserShare = currentUser === "Ali" ? 0.25 : 0.75;
     const userValue = totalValue * currentUserShare;
     
-    for (let i = points - 1; i >= 0; i--) {
+    for (let i = dataPoints - 1; i >= 0; i--) {
       const date = new Date();
       if (period === "1d") {
-        // Per 1 giorno: campiona ogni 3 ore per avere etichette pulite (8 punti = 0h, 3h, 6h, 9h, 12h, 15h, 18h, 21h)
-        const hoursBack = i * 3;
-        date.setHours(date.getHours() - hoursBack);
+        // Per 1 giorno: punti ogni 30 minuti (48 punti)
+        const minutesBack = i * 30;
+        date.setMinutes(date.getMinutes() - minutesBack);
       } else {
-        // Per altri periodi: distribuisci uniformemente con più spazio
-        const daysBack = period === "7d" ? i : 
-                        period === "30d" ? i * 3 : // ogni 3 giorni per 30d (10 punti)
-                        i * 8; // ogni 8 giorni per 90d (12 punti)
-        date.setDate(date.getDate() - daysBack);
+        // Per altri periodi: punti ogni giorno
+        date.setDate(date.getDate() - i);
       }
       
       const dataPoint: any = {
+        // Per le etichette X mostra solo alcuni punti per evitare sovrapposizioni
         date: period === "1d" 
-          ? date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+          ? (i % (dataPoints / labelPoints) === 0 || i === 0) 
+            ? date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+            : ''
           : period === "7d"
             ? date.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })
             : period === "30d"
-              ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
-              : date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }),
+              ? (i % 3 === 0 || i === 0) // ogni 3 giorni
+                ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+                : ''
+              : (i % 8 === 0 || i === 0) // ogni 8 giorni
+                ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+                : '',
+        // Per il tooltip, sempre mostra la data completa
+        fullDate: period === "1d" 
+          ? date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+          : date.toLocaleDateString('it-IT', { 
+              weekday: 'short', day: 'numeric', month: 'short'
+            }),
         rawDate: date.toISOString(),
       };
 
       if (viewMode === "separate") {
         // SEPARATE VIEW: Generate only user-specific data
-        const trend = Math.sin(i / points * Math.PI) * 0.12;
+        const trend = Math.sin(i / dataPoints * Math.PI) * 0.12;
         const randomVariation = (Math.random() - 0.5) * 0.08;
-        const historicalValue = userValue * (1 + trend + randomVariation * (i / points));
+        const historicalValue = userValue * (1 + trend + randomVariation * (i / dataPoints));
         dataPoint.userPortfolio = Math.max(historicalValue, userValue * 0.88);
       } else {
         // CUMULATIVE VIEW: Generate individual investments + total portfolio
         investments.forEach((investment, index) => {
           const investmentValue = investment.quantity * investment.currentPrice;
-          const trend = Math.sin((i / points + index * 0.5) * Math.PI) * 0.15;
+          const trend = Math.sin((i / dataPoints + index * 0.5) * Math.PI) * 0.15;
           const randomVariation = (Math.random() - 0.5) * 0.06;
-          const historicalValue = investmentValue * (1 + trend + randomVariation * (i / points));
+          const historicalValue = investmentValue * (1 + trend + randomVariation * (i / dataPoints));
           dataPoint[investment.symbol] = Math.max(historicalValue, investmentValue * 0.85);
         });
         
         // Generate total portfolio data for cumulative view
-        const trend = Math.sin(i / points * Math.PI) * 0.1;
+        const trend = Math.sin(i / dataPoints * Math.PI) * 0.1;
         const randomVariation = (Math.random() - 0.5) * 0.05;
-        const historicalValue = totalValue * (1 + trend + randomVariation * (i / points));
+        const historicalValue = totalValue * (1 + trend + randomVariation * (i / dataPoints));
         dataPoint.portfolio = Math.max(historicalValue, totalValue * 0.9);
       }
       
@@ -202,16 +214,17 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                   return [formatCurrency(value), displayName];
                 }
               }}
-              labelFormatter={(label) => {
-                const dataPoint = chartData.find(d => d.date === label);
-                if (dataPoint?.rawDate) {
-                  const date = new Date(dataPoint.rawDate);
-                  return date.toLocaleDateString('it-IT', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  });
+              labelFormatter={(label, payload) => {
+                if (payload && payload.length > 0 && payload[0].payload?.rawDate) {
+                  const date = new Date(payload[0].payload.rawDate);
+                  return period === '1d' 
+                    ? `${date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })} - ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
+                    : date.toLocaleDateString('it-IT', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      });
                 }
                 return label;
               }}

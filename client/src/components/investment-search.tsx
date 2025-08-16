@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { yahooFinanceService, FormattedSearchResult, FormattedQuote } from "@/services/yahooFinanceService";
+import { finnhubService, FormattedSearchResult, FormattedQuote } from "@/services/finnhubService";
 
 interface SecuritySearchResult {
   symbol: string;
@@ -36,16 +36,16 @@ export function InvestmentSearch({ onSelect }: InvestmentSearchProps) {
     setError(null);
     
     try {
-      // Use Yahoo Finance service to search symbols
-      const yahooResults = await yahooFinanceService.searchSymbol(searchQuery);
+      // Use Finnhub service to search symbols
+      const finnhubResults = await finnhubService.searchSymbol(searchQuery);
       
-      // Convert Yahoo results to expected format and get quotes for prices
+      // Convert Finnhub results to expected format and get quotes for prices
       const securityResults: SecuritySearchResult[] = [];
       
-      for (const result of yahooResults.slice(0, 10)) {
+      for (const result of finnhubResults.slice(0, 10)) {
         try {
           // Get current price for each symbol
-          const quote = await yahooFinanceService.getQuote(result.symbol);
+          const quote = await finnhubService.getQuote(result.symbol);
           
           securityResults.push({
             symbol: result.symbol,

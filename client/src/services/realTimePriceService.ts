@@ -1,4 +1,4 @@
-import { yahooFinanceService, FormattedQuote } from './yahooFinanceService';
+import { finnhubService, FormattedQuote } from './finnhubService';
 import { Investment } from '@shared/schema';
 
 interface PriceUpdate {
@@ -19,7 +19,12 @@ class RealTimePriceService {
   private lastUpdate: number = 0;
 
   async startPriceUpdates(investments: Investment[], callback: PriceUpdateCallback): Promise<void> {
-    // Yahoo Finance service is always available (no API key required)
+    // Check if Finnhub service is configured
+    if (!(await finnhubService.isConfigured())) {
+      console.warn('Finnhub service not configured, real-time updates disabled');
+      return;
+    }
+
     this.updateCallbacks.add(callback);
 
     if (!this.isRunning && investments.length > 0) {
@@ -58,7 +63,7 @@ class RealTimePriceService {
   private async fetchAndBroadcastUpdates(investments: Investment[]): Promise<void> {
     try {
       const symbols = investments.map(inv => inv.symbol);
-      const quotes = await yahooFinanceService.getMultipleQuotes(symbols);
+      const quotes = await finnhubService.getMultipleQuotes(symbols);
       
       const updates: PriceUpdate[] = quotes
         .filter((quote): quote is FormattedQuote => quote !== null)
@@ -91,7 +96,7 @@ class RealTimePriceService {
 
   async validateAndGetPrice(symbol: string): Promise<{ valid: boolean; price?: number; name?: string; error?: string }> {
     try {
-      const quote = await yahooFinanceService.getQuote(symbol);
+      const quote = await finnhubService.getQuote(symbol);
       
       if (quote) {
         return {
@@ -115,10 +120,37 @@ class RealTimePriceService {
 
   async searchSymbols(query: string) {
     try {
-      return await yahooFinanceService.searchSymbol(query);
+      return await finnhubService.searchSymbol(query);
     } catch (error) {
       console.error('Symbol search failed:', error);
       return [];
+    }
+  }
+
+  async searchByISIN(isin: string) {
+    try {
+      return await finnhubService.searchByISIN(isin);
+    } catch (error) {
+      console.error('ISIN search failed:', error);
+      return [];
+    }
+  }
+
+  async validateISIN(isin: string): Promise<{ valid: boolean; symbol?: string; name?: string; error?: string }> {
+    try {
+      const result = await finnhubService.validateISIN(isin);
+      if (!result.valid) {
+        return {
+          valid: false,
+          error: 'Invalid ISIN format or not found'
+        };
+      }
+      return result;
+    } catch (error) {
+      return {
+        valid: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 

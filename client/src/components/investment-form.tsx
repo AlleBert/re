@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Check, AlertCircle, Search } from "lucide-react";
 import { LocalStorageService } from "@/lib/storage";
 import { realTimePriceService } from "@/services/realTimePriceService";
-import { yahooFinanceService } from "@/services/yahooFinanceService";
+import { finnhubService } from "@/services/finnhubService";
 
 interface InvestmentFormProps {
   open: boolean;
@@ -40,6 +40,11 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     results: any[];
     isSearching: boolean;
   }>({ query: '', results: [], isSearching: false });
+  const [isinValidation, setIsinValidation] = useState<{
+    status: 'idle' | 'validating' | 'valid' | 'invalid';
+    message?: string;
+    data?: any;
+  }>({ status: 'idle' });
 
   const form = useForm<InsertInvestment & { totalAmount?: number }>({
     resolver: zodResolver(insertInvestmentSchema.extend({
@@ -48,6 +53,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     defaultValues: editingInvestment ? {
       name: editingInvestment.name,
       symbol: editingInvestment.symbol,
+      isin: editingInvestment.isin,
       category: editingInvestment.category,
       quantity: editingInvestment.quantity,
       avgPrice: editingInvestment.avgPrice,
@@ -58,6 +64,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     } : {
       name: "",
       symbol: "",
+      isin: "",
       category: "stocks",
       quantity: undefined,
       avgPrice: undefined,
@@ -107,6 +114,42 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     }
   };
 
+  // Validate ISIN
+  const validateISIN = async (isin: string) => {
+    if (!isin || isin.length < 12) {
+      setIsinValidation({ status: 'idle' });
+      return;
+    }
+
+    setIsinValidation({ status: 'validating' });
+    
+    try {
+      const result = await realTimePriceService.validateISIN(isin);
+      
+      if (result.valid && result.symbol && result.name) {
+        setIsinValidation({
+          status: 'valid',
+          message: `${result.name} (${result.symbol})`,
+          data: result
+        });
+        
+        // Auto-fill form fields if ISIN validation is successful
+        form.setValue('name', result.name);
+        form.setValue('symbol', result.symbol);
+      } else {
+        setIsinValidation({
+          status: 'invalid',
+          message: result.error || 'ISIN not found or invalid format'
+        });
+      }
+    } catch (error) {
+      setIsinValidation({
+        status: 'invalid',
+        message: 'ISIN validation failed'
+      });
+    }
+  };
+
   // Search by company name
   const searchByName = async (query: string) => {
     if (!query || query.length < 3) {
@@ -149,12 +192,18 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     }
   };
 
-  // Debounced symbol validation
+  // Debounced symbol and ISIN validation
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'symbol' && value.symbol && typeof value.symbol === 'string') {
         const timer = setTimeout(() => {
           validateSymbol(value.symbol!);
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+      if (name === 'isin' && value.isin && typeof value.isin === 'string') {
+        const timer = setTimeout(() => {
+          validateISIN(value.isin!);
         }, 1000);
         return () => clearTimeout(timer);
       }
@@ -192,6 +241,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       }
       form.reset();
       setSymbolValidation({ status: 'idle' });
+      setIsinValidation({ status: 'idle' });
       setSymbolSearch({ query: '', results: [], isSearching: false });
       setNameSearch({ query: '', results: [], isSearching: false });
       onSuccess();
@@ -380,6 +430,52 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                       {symbolValidation.message}
                     </div>
                   )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isin"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-base font-medium">ISIN (Opzionale)</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input 
+                        placeholder="es. US0378331005 (Apple), IT0003128367 (ENI)..." 
+                        {...field}
+                        className="pr-10 font-mono"
+                        maxLength={12}
+                        onChange={(e) => {
+                          const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                          field.onChange(value);
+                        }}
+                      />
+                      {isinValidation.status === 'validating' && (
+                        <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-slate-400" />
+                      )}
+                      {isinValidation.status === 'valid' && (
+                        <Check className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                      )}
+                      {isinValidation.status === 'invalid' && (
+                        <AlertCircle className="absolute right-3 top-3 h-4 w-4 text-red-500" />
+                      )}
+                    </div>
+                  </FormControl>
+                  {isinValidation.message && (
+                    <div className={`text-sm mt-2 p-2 rounded-md ${
+                      isinValidation.status === 'valid' 
+                        ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+                        : 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                    }`}>
+                      {isinValidation.message}
+                    </div>
+                  )}
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    L'ISIN può essere utilizzato per cercare e validare automaticamente il titolo
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

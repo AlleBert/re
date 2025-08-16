@@ -4,6 +4,7 @@ export const investmentSchema = z.object({
   id: z.string(),
   name: z.string(),
   symbol: z.string(),
+  isin: z.string().optional(),
   category: z.enum(["stocks", "etf", "crypto", "bonds"]),
   quantity: z.number().positive(),
   avgPrice: z.number().positive(),

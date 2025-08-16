@@ -10,15 +10,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(getClientConfig());
   });
 
-  // Finnhub API proxy routes
+  // Finnhub API proxy routes with enhanced ETF search
   app.get("/api/finnhub/search", async (req, res) => {
     try {
       const query = req.query.q as string;
       if (!query) {
         return res.status(400).json({ error: "Query parameter required" });
       }
-      // Enhanced search that includes stocks, ETFs, and crypto
+      
       const results = await serverFinnhubService.searchSymbol(query);
+      console.log(`Search for "${query}" returned ${results.length} results:`, results.map(r => `${r.symbol} (${r.type})`));
+      
       res.json(results);
     } catch (error) {
       console.error("Finnhub search error:", error);

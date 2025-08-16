@@ -92,22 +92,35 @@ class ServerFinnhubService {
 
   async searchSymbol(query: string) {
     try {
-      // Only do basic stock/ETF search to avoid rate limits
+      // Search for stocks and ETFs
       const data = await this.makeRequest<FinnhubSymbolLookup>('/search', { q: query });
       
       if (!data?.result) return [];
 
       const results = data.result
         .filter((item: any) => item.symbol && item.description)
-        .map((item: any) => ({
-          symbol: item.displaySymbol || item.symbol,
-          name: item.description,
-          currency: 'USD',
-          stockExchange: '',
-          exchangeShortName: '',
-          type: this.categorizeSymbol(item.symbol, item.description)
-        }))
-        .slice(0, 10);
+        .map((item: any) => {
+          const type = this.categorizeSymbol(item.symbol, item.description);
+          return {
+            symbol: item.displaySymbol || item.symbol,
+            name: item.description,
+            currency: 'USD',
+            stockExchange: item.exchange || '',
+            exchangeShortName: item.exchange || '',
+            type: type
+          };
+        })
+        .slice(0, 15);
+
+      // Sort to prioritize ETFs if the query looks like an ETF search
+      const queryLower = query.toLowerCase();
+      if (queryLower.includes('etf') || queryLower.includes('vanguard') || queryLower.includes('ishares')) {
+        results.sort((a, b) => {
+          if (a.type === 'ETF' && b.type !== 'ETF') return -1;
+          if (a.type !== 'ETF' && b.type === 'ETF') return 1;
+          return 0;
+        });
+      }
 
       return results;
     } catch (error) {
@@ -116,53 +129,40 @@ class ServerFinnhubService {
     }
   }
 
-  private async searchCrypto(query: string) {
-    try {
-      // Get crypto symbols - Finnhub provides crypto data
-      const cryptoData = await this.makeRequest<any>('/crypto/symbol', { exchange: 'binance' });
-      
-      if (!Array.isArray(cryptoData)) return [];
 
-      // Filter crypto symbols that match the query
-      const matches = cryptoData
-        .filter((crypto: any) => 
-          crypto.symbol?.toLowerCase().includes(query.toLowerCase()) ||
-          crypto.description?.toLowerCase().includes(query.toLowerCase())
-        )
-        .slice(0, 5)
-        .map((crypto: any) => ({
-          symbol: crypto.symbol,
-          name: crypto.description || crypto.symbol,
-          currency: 'USD',
-          stockExchange: 'Binance',
-          exchangeShortName: 'BINANCE',
-          type: 'Crypto'
-        }));
-
-      return matches;
-    } catch (error) {
-      console.error('Crypto search failed:', error);
-      return [];
-    }
-  }
 
   private categorizeSymbol(symbol: string, description: string): string {
     const symbolUpper = symbol.toUpperCase();
     const descUpper = description.toUpperCase();
     
-    // ETF detection
-    if (descUpper.includes('ETF') || descUpper.includes('FUND') || 
-        descUpper.includes('INDEX') || symbolUpper.includes('ETF')) {
+    // Enhanced ETF detection
+    if (descUpper.includes('ETF') || 
+        descUpper.includes('FUND') || 
+        descUpper.includes('INDEX') || 
+        descUpper.includes('EXCHANGE TRADED') ||
+        descUpper.includes('VANGUARD') ||
+        descUpper.includes('ISHARES') ||
+        descUpper.includes('SPDR') ||
+        descUpper.includes('XTRACKERS') ||
+        descUpper.includes('AMUNDI') ||
+        symbolUpper.includes('ETF') ||
+        symbolUpper.startsWith('VWC') ||
+        symbolUpper.startsWith('VWCE') ||
+        symbolUpper.startsWith('SWDA') ||
+        symbolUpper.startsWith('EUNL')) {
       return 'ETF';
     }
     
     // Check if it's a crypto symbol pattern
-    if (symbolUpper.includes('USD') || symbolUpper.includes('BTC') || 
-        symbolUpper.includes('ETH') || symbolUpper.endsWith('USDT')) {
+    if (symbolUpper.includes('-USD') || 
+        symbolUpper.includes('BTC') || 
+        symbolUpper.includes('ETH') || 
+        symbolUpper.endsWith('USDT') ||
+        symbolUpper.includes('CRYPTO')) {
       return 'Crypto';
     }
     
-    return 'Common Stock';
+    return 'Stock';
   }
 
   async lookupByISIN(isin: string) {

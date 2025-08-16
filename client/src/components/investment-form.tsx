@@ -256,10 +256,19 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
 
       if (inputMode === "total" && data.totalAmount && data.avgPrice && data.totalAmount > 0 && data.avgPrice > 0) {
         finalData.quantity = data.totalAmount / data.avgPrice;
+        // avgPrice is already set correctly
       } else if (inputMode === "quantity" && data.quantity && data.avgPrice && data.quantity > 0 && data.avgPrice > 0) {
         // Already set correctly
       } else {
-        throw new Error('Per favore inserisci valori validi per quantità e prezzo');
+        const missing = [];
+        if (inputMode === "total") {
+          if (!data.totalAmount || data.totalAmount <= 0) missing.push('totale acquistato');
+          if (!data.avgPrice || data.avgPrice <= 0) missing.push('prezzo');
+        } else {
+          if (!data.quantity || data.quantity <= 0) missing.push('quantità');
+          if (!data.avgPrice || data.avgPrice <= 0) missing.push('prezzo');
+        }
+        throw new Error(`Per favore inserisci: ${missing.join(', ')}`);
       }
 
       // Set current price to average price initially
@@ -678,7 +687,8 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                           step="0.01" 
                           placeholder="175.50"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />

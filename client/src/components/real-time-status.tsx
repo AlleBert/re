@@ -67,9 +67,11 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
         <Tooltip>
           <TooltipTrigger asChild>
             <div>
-              <Badge variant={getStatusColor() as any} className="flex items-center space-x-1">
+              <Badge 
+                variant={getStatusColor() as any} 
+                className="h-6 w-6 p-0 rounded-full flex items-center justify-center"
+              >
                 {getStatusIcon()}
-                <span>{getStatusText()}</span>
               </Badge>
             </div>
           </TooltipTrigger>

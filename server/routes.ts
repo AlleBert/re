@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { getClientConfig, config } from "./config";
 import { serverFinnhubService } from "./finnhub";
 import { multiProviderService } from "./multiProvider";
+import { insertInvestmentSchema, insertTransactionSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Configuration endpoint for client environment variables
@@ -87,8 +88,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // Investment CRUD operations
+  app.get("/api/investments", async (req, res) => {
+    try {
+      const investments = await storage.getInvestments();
+      res.json(investments);
+    } catch (error) {
+      console.error("Get investments error:", error);
+      res.status(500).json({ error: "Failed to fetch investments" });
+    }
+  });
+
+  app.post("/api/investments", async (req, res) => {
+    try {
+      const validatedData = insertInvestmentSchema.parse(req.body);
+      const investment = await storage.createInvestment(validatedData);
+      
+      // Also create a transaction for this purchase
+      await storage.createTransaction({
+        type: "buy",
+        assetSymbol: investment.symbol,
+        assetName: investment.name,
+        quantity: investment.quantity,
+        price: investment.avgPrice,
+        total: investment.quantity * investment.avgPrice,
+        user: "Alle" // Default to admin user for new investments
+      });
+      
+      console.log(`New investment created: ${investment.name} (${investment.symbol})`);
+      res.status(201).json(investment);
+    } catch (error) {
+      console.error("Create investment error:", error);
+      res.status(400).json({ error: "Failed to create investment", details: error });
+    }
+  });
+
+  app.put("/api/investments/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const investment = await storage.updateInvestment(id, updates);
+      
+      if (!investment) {
+        return res.status(404).json({ error: "Investment not found" });
+      }
+      
+      res.json(investment);
+    } catch (error) {
+      console.error("Update investment error:", error);
+      res.status(500).json({ error: "Failed to update investment" });
+    }
+  });
+
+  app.delete("/api/investments/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteInvestment(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Investment not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Delete investment error:", error);
+      res.status(500).json({ error: "Failed to delete investment" });
+    }
+  });
+
+  // Transaction operations
+  app.get("/api/transactions", async (req, res) => {
+    try {
+      const transactions = await storage.getTransactions();
+      res.json(transactions);
+    } catch (error) {
+      console.error("Get transactions error:", error);
+      res.status(500).json({ error: "Failed to fetch transactions" });
+    }
+  });
+
+  app.post("/api/transactions", async (req, res) => {
+    try {
+      const validatedData = insertTransactionSchema.parse(req.body);
+      const transaction = await storage.createTransaction(validatedData);
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("Create transaction error:", error);
+      res.status(400).json({ error: "Failed to create transaction", details: error });
+    }
+  });
+
+  // Price update endpoint
+  app.patch("/api/investments/:id/price", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { price, user } = req.body;
+      
+      if (!price || !user) {
+        return res.status(400).json({ error: "Price and user are required" });
+      }
+      
+      const investment = await storage.updateInvestmentPrice(id, price, user);
+      
+      if (!investment) {
+        return res.status(404).json({ error: "Investment not found" });
+      }
+      
+      res.json(investment);
+    } catch (error) {
+      console.error("Update price error:", error);
+      res.status(500).json({ error: "Failed to update price" });
+    }
+  });
 
   const httpServer = createServer(app);
 

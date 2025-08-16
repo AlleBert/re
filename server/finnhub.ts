@@ -37,6 +37,9 @@ interface FinnhubCompanyProfile {
 class ServerFinnhubService {
   private baseUrl = 'https://finnhub.io/api/v1';
   private apiKey: string;
+  private requestQueue: Promise<any>[] = [];
+  private lastRequestTime = 0;
+  private minRequestInterval = 100; // Minimum 100ms between requests
 
   constructor() {
     this.apiKey = process.env.FINNHUB_API_KEY || '';
@@ -47,6 +50,14 @@ class ServerFinnhubService {
       throw new Error('Finnhub API key not configured');
     }
 
+    // Rate limiting: ensure minimum interval between requests
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      await new Promise(resolve => setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest));
+    }
+    this.lastRequestTime = Date.now();
+
     const url = new URL(`${this.baseUrl}${endpoint}`);
     url.searchParams.append('token', this.apiKey);
     
@@ -56,6 +67,16 @@ class ServerFinnhubService {
 
     try {
       const response = await fetch(url.toString());
+      
+      if (response.status === 429) {
+        // Rate limited - wait and retry once
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const retryResponse = await fetch(url.toString());
+        if (!retryResponse.ok) {
+          throw new Error(`Finnhub API error: ${retryResponse.status} ${retryResponse.statusText}`);
+        }
+        return await retryResponse.json();
+      }
       
       if (!response.ok) {
         throw new Error(`Finnhub API error: ${response.status} ${response.statusText}`);
@@ -71,44 +92,24 @@ class ServerFinnhubService {
 
   async searchSymbol(query: string) {
     try {
-      // Search across multiple exchanges to include stocks, ETFs, and crypto
-      const promises = [
-        // US markets (stocks, ETFs)
-        this.makeRequest<FinnhubSymbolLookup>('/search', { q: query }),
-        // Crypto search
-        this.searchCrypto(query)
-      ];
-
-      const [stockResults, cryptoResults] = await Promise.allSettled(promises);
+      // Only do basic stock/ETF search to avoid rate limits
+      const data = await this.makeRequest<FinnhubSymbolLookup>('/search', { q: query });
       
-      let allResults: any[] = [];
+      if (!data?.result) return [];
 
-      // Add stock/ETF results
-      if (stockResults.status === 'fulfilled' && stockResults.value?.result) {
-        const filtered = stockResults.value.result
-          .filter((item: any) => item.symbol && item.description)
-          .map((item: any) => ({
-            symbol: item.displaySymbol || item.symbol,
-            name: item.description,
-            currency: 'USD',
-            stockExchange: '',
-            exchangeShortName: '',
-            type: this.categorizeSymbol(item.symbol, item.description)
-          }));
-        allResults.push(...filtered);
-      }
+      const results = data.result
+        .filter((item: any) => item.symbol && item.description)
+        .map((item: any) => ({
+          symbol: item.displaySymbol || item.symbol,
+          name: item.description,
+          currency: 'USD',
+          stockExchange: '',
+          exchangeShortName: '',
+          type: this.categorizeSymbol(item.symbol, item.description)
+        }))
+        .slice(0, 10);
 
-      // Add crypto results
-      if (cryptoResults.status === 'fulfilled' && Array.isArray(cryptoResults.value)) {
-        allResults.push(...cryptoResults.value);
-      }
-
-      // Remove duplicates and limit results
-      const uniqueResults = allResults.filter((item, index, self) => 
-        index === self.findIndex(t => t.symbol === item.symbol)
-      );
-
-      return uniqueResults.slice(0, 15);
+      return results;
     } catch (error) {
       console.error('Symbol search failed:', error);
       return [];
@@ -195,16 +196,16 @@ class ServerFinnhubService {
 
   async getQuote(symbol: string) {
     try {
-      const [quote, profile] = await Promise.all([
-        this.makeRequest<FinnhubQuote>('/quote', { symbol: symbol.toUpperCase() }),
-        this.makeRequest<FinnhubCompanyProfile>('/stock/profile2', { symbol: symbol.toUpperCase() }).catch(() => null)
-      ]);
+      // Only get quote, skip profile to reduce API calls
+      const quote = await this.makeRequest<FinnhubQuote>('/quote', { symbol: symbol.toUpperCase() });
       
-      if (!quote || quote.c === undefined) return null;
+      if (!quote || quote.c === undefined || quote.c === 0) {
+        return null;
+      }
 
       return {
         symbol: symbol.toUpperCase(),
-        name: profile?.name || symbol,
+        name: symbol.toUpperCase(), // Use symbol as name for now
         price: quote.c,
         changesPercentage: quote.dp || 0,
         change: quote.d || 0,
@@ -212,9 +213,9 @@ class ServerFinnhubService {
         dayHigh: quote.h || 0,
         open: quote.o || 0,
         previousClose: quote.pc || 0,
-        currency: profile?.currency || 'USD',
-        exchange: profile?.exchange || '',
-        marketCap: profile?.marketCapitalization || undefined
+        currency: 'USD',
+        exchange: '',
+        marketCap: undefined
       };
     } catch (error) {
       console.error(`Failed to get quote for ${symbol}:`, error);

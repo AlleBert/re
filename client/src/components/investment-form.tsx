@@ -87,29 +87,27 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     try {
       const result = await finnhubService.getQuote(symbol);
       
-      if (result && result.price && result.name) {
+      if (result && result.price > 0) {
         setSymbolValidation({
           status: 'valid',
-          message: `${result.name} - Current price: €${result.price.toFixed(2)}`,
+          message: `${symbol.toUpperCase()} - Current price: $${result.price.toFixed(2)}`,
           data: result
         });
         
-        // Auto-fill form fields if validation is successful
-        form.setValue('name', result.name);
-        // Set the current price as avgPrice (user can modify if needed)
+        // Set current price if validation is successful
         if (!form.getValues('avgPrice')) {
           form.setValue('avgPrice', result.price);
         }
       } else {
         setSymbolValidation({
           status: 'invalid',
-          message: 'Symbol not found'
+          message: 'Simbolo non trovato o prezzo non disponibile'
         });
       }
     } catch (error) {
       setSymbolValidation({
         status: 'invalid',
-        message: 'Validation failed'
+        message: 'Errore nella validazione del simbolo'
       });
     }
   };

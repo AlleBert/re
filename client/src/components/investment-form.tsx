@@ -243,10 +243,6 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
   });
 
   const onSubmit = async (data: InsertInvestment & { totalAmount?: number }) => {
-    console.log('🚀 Form submit started with data:', data);
-    console.log('🔍 Form errors:', form.formState.errors);
-    console.log('🎯 Symbol validation status:', symbolValidation.status);
-    
     setIsSubmitting(true);
     try {
       // Validate symbol before submitting if validation failed
@@ -267,22 +263,16 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       // Set current price to average price initially
       finalData.currentPrice = finalData.avgPrice;
       
-      console.log('📝 Final data to send:', finalData);
-      
       if (editingInvestment) {
-        console.log('🔄 Updating existing investment...');
         // Update existing investment via API
         await updateInvestmentMutation.mutateAsync({ 
           id: editingInvestment.id, 
           data: finalData 
         });
       } else {
-        console.log('➕ Creating new investment...');
         // Add new investment via API
         await createInvestmentMutation.mutateAsync(finalData);
       }
-      
-      console.log('✅ Investment saved successfully!');
 
       form.reset();
       setSymbolValidation({ status: 'idle' });
@@ -336,15 +326,7 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={(e) => {
-            console.log('📋 Form submit event triggered');
-            console.log('🚨 Current form errors:', form.formState.errors);
-            console.log('📊 Current form values:', form.getValues());
-            console.log('✅ Form is valid:', form.formState.isValid);
-            console.log('💰 CurrentPrice error details:', form.formState.errors.currentPrice);
-            console.log('💰 CurrentPrice value:', form.getValues('currentPrice'));
-            form.handleSubmit(onSubmit)(e);
-          }} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"

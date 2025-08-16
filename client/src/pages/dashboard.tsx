@@ -36,17 +36,33 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [historyFilter, setHistoryFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState("30days");
   const [lastPriceUpdate, setLastPriceUpdate] = useState<number>(0);
+  const queryClient = useQueryClient();
+
+  // Fetch investments using React Query
+  const { data: investmentsData = [], refetch: refetchInvestments } = useQuery({
+    queryKey: ['/api/investments'],
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Fetch transactions using React Query  
+  const { data: transactionsData = [] } = useQuery({
+    queryKey: ['/api/transactions'],
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Update local state when API data changes
+  useEffect(() => {
+    setInvestments(investmentsData);
+    setTransactions(transactionsData);
+    setPortfolio(LocalStorageService.calculatePortfolioSummary(investmentsData));
+  }, [investmentsData, transactionsData]);
 
   useEffect(() => {
-    loadData();
-    
     // Start real-time price updates if user is admin
-    if (user.isAdmin) {
+    if (user.isAdmin && investments.length > 0) {
       const handlePriceUpdates = (updates: any[]) => {
-        updates.forEach(update => {
-          LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'Yahoo Finance');
-        });
-        loadData();
+        // Trigger refetch of investments after price updates
+        refetchInvestments();
         setLastPriceUpdate(Date.now());
       };
 
@@ -60,50 +76,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         realTimePriceService.stopPriceUpdates(handlePriceUpdates);
       };
     }
-  }, [user.isAdmin, investments.length]);
+  }, [user.isAdmin, investments.length, refetchInvestments]);
 
-  // Separate effect to restart price updates when investments change
-  useEffect(() => {
-    if (user.isAdmin && investments.length > 0) {
-      const handlePriceUpdates = (updates: any[]) => {
-        updates.forEach(update => {
-          LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'Yahoo Finance');
-        });
-        loadData();
-        setLastPriceUpdate(Date.now());
-      };
 
-      const restartUpdates = async () => {
-        realTimePriceService.stopPriceUpdates();
-        await realTimePriceService.startPriceUpdates(investments, handlePriceUpdates);
-      };
-      
-      restartUpdates();
-    }
-  }, [investments, user.isAdmin]);
-
-  const loadData = async () => {
-    try {
-      // Try to load from API first
-      const [investmentResponse, transactionResponse] = await Promise.all([
-        fetch('/api/investments').then(r => r.json()).catch(() => []),
-        fetch('/api/transactions').then(r => r.json()).catch(() => [])
-      ]);
-      
-      setInvestments(investmentResponse);
-      setTransactions(transactionResponse);
-      setPortfolio(LocalStorageService.calculatePortfolioSummary(investmentResponse));
-    } catch (error) {
-      console.error('Failed to load from API, falling back to localStorage:', error);
-      // Fallback to localStorage if API fails
-      const investmentData = LocalStorageService.getInvestments();
-      const transactionData = LocalStorageService.getTransactions();
-      
-      setInvestments(investmentData);
-      setTransactions(transactionData);
-      setPortfolio(LocalStorageService.calculatePortfolioSummary(investmentData));
-    }
-  };
 
   const handleEditInvestment = (investment: Investment) => {
     if (!user.isAdmin) return;
@@ -117,24 +92,44 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     setNewPrice(investment.currentPrice.toString());
   };
 
+  const updatePriceMutation = useMutation({
+    mutationFn: async ({ id, price }: { id: string; price: number }) => {
+      const response = await apiRequest('PUT', `/api/investments/${id}`, { currentPrice: price });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+    }
+  });
+
   const handlePriceUpdate = (investmentId: string) => {
     if (!user.isAdmin) return;
     
     const price = parseFloat(newPrice);
     if (isNaN(price) || price <= 0) return;
     
-    LocalStorageService.updateInvestmentPrice(investmentId, price, user.name);
+    updatePriceMutation.mutate({ id: investmentId, price });
     setEditingPriceId(null);
     setNewPrice("");
-    loadData();
   };
+
+  const deleteInvestmentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('DELETE', `/api/investments/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+    }
+  });
 
   const handleDeleteInvestment = (investmentId: string) => {
     if (!user.isAdmin) return;
     
     if (confirm("Are you sure you want to delete this investment?")) {
-      LocalStorageService.deleteInvestment(investmentId);
-      loadData();
+      deleteInvestmentMutation.mutate(investmentId);
     }
   };
 
@@ -213,17 +208,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   lastUpdate={lastPriceUpdate}
                   onManualRefresh={async () => {
                     // Force immediate price update
-                    const handlePriceUpdates = (updates: any[]) => {
-                      updates.forEach(update => {
-                        LocalStorageService.updateInvestmentPrice(update.symbol, update.price, 'Yahoo Finance');
-                      });
-                      loadData();
-                      setLastPriceUpdate(Date.now());
-                    };
-                    
                     if (investments.length > 0) {
-                      realTimePriceService.stopPriceUpdates();
-                      await realTimePriceService.startPriceUpdates(investments, handlePriceUpdates);
+                      refetchInvestments();
+                      setLastPriceUpdate(Date.now());
                     }
                   }}
                 />

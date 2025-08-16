@@ -46,6 +46,7 @@ class MultiProviderService {
       const finnhubQuote = await serverFinnhubService.getQuote(symbol);
       if (finnhubQuote && finnhubQuote.price > 0) {
         const enhancedQuote = { ...finnhubQuote, provider: 'Finnhub' };
+        console.log(`Quote for ${symbol} provided by: Finnhub`);
         this.setCachedQuote(symbol, enhancedQuote);
         return enhancedQuote;
       }
@@ -58,6 +59,7 @@ class MultiProviderService {
       const alphaQuote = await this.getAlphaVantageQuote(symbol);
       if (alphaQuote) {
         alphaQuote.provider = 'Alpha Vantage';
+        console.log(`Quote for ${symbol} provided by: Alpha Vantage`);
         this.setCachedQuote(symbol, alphaQuote);
         return alphaQuote;
       }
@@ -70,6 +72,7 @@ class MultiProviderService {
       const yahooQuote = await this.getYahooFinanceQuote(symbol);
       if (yahooQuote) {
         yahooQuote.provider = 'Yahoo Finance';
+        console.log(`Quote for ${symbol} provided by: Yahoo Finance`);
         this.setCachedQuote(symbol, yahooQuote);
         return yahooQuote;
       }
@@ -85,6 +88,7 @@ class MultiProviderService {
     const cached = this.cache.get(symbol.toUpperCase());
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       console.log(`Cache hit for ${symbol}`);
+      console.log(`Quote for ${symbol} provided by: ${cached.data.provider}`);
       return cached.data;
     }
     return null;

@@ -32,17 +32,19 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
       };
 
       if (viewMode === "cumulative") {
-        // Simulate historical variation for total portfolio (±2%)
-        const variation = (Math.random() - 0.5) * 0.04;
-        const historicalValue = totalValue * (1 + variation * (i / points));
-        dataPoint.portfolio = historicalValue;
+        // Simulate historical variation for total portfolio (±5%) with trend
+        const trend = Math.sin(i / points * Math.PI) * 0.1; // Slight upward trend
+        const randomVariation = (Math.random() - 0.5) * 0.05;
+        const historicalValue = totalValue * (1 + trend + randomVariation * (i / points));
+        dataPoint.portfolio = Math.max(historicalValue, totalValue * 0.9); // Minimum 90% of current value
       } else {
-        // Show individual investments
-        investments.forEach((investment) => {
+        // Show individual investments with more varied patterns
+        investments.forEach((investment, index) => {
           const investmentValue = investment.quantity * investment.currentPrice;
-          const variation = (Math.random() - 0.5) * 0.04;
-          const historicalValue = investmentValue * (1 + variation * (i / points));
-          dataPoint[investment.symbol] = historicalValue;
+          const trend = Math.sin((i / points + index * 0.5) * Math.PI) * 0.15; // Different trend per investment
+          const randomVariation = (Math.random() - 0.5) * 0.06;
+          const historicalValue = investmentValue * (1 + trend + randomVariation * (i / points));
+          dataPoint[investment.symbol] = Math.max(historicalValue, investmentValue * 0.85); // Minimum 85% of current value
         });
       }
       
@@ -149,7 +151,7 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
                 dataKey="portfolio"
                 stroke="hsl(var(--primary))"
                 strokeWidth={3}
-                dot={false}
+                dot={{ r: 3, fill: "hsl(var(--primary))" }}
                 activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
               />
             ) : (
@@ -159,8 +161,8 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
                   type="monotone"
                   dataKey={investment.symbol}
                   stroke={getColorForInvestment(index)}
-                  strokeWidth={2}
-                  dot={false}
+                  strokeWidth={2.5}
+                  dot={{ r: 2, fill: getColorForInvestment(index) }}
                   activeDot={{ r: 5, fill: getColorForInvestment(index), stroke: "#ffffff", strokeWidth: 2 }}
                 />
               ))

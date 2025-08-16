@@ -328,7 +328,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 <CardTitle>Andamento Portfolio</CardTitle>
               </CardHeader>
               <CardContent>
-                <MinimalPortfolioChart investments={investments} />
+                <MinimalPortfolioChart investments={investments} currentUser={user.name as "Ali" | "Alle"} />
               </CardContent>
             </Card>
 

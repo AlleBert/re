@@ -7,9 +7,10 @@ import { Investment } from "@shared/schema";
 
 interface MinimalPortfolioChartProps {
   investments: Investment[];
+  currentUser?: "Ali" | "Alle";
 }
 
-export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProps) {
+export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: MinimalPortfolioChartProps) {
   const [viewMode, setViewMode] = useState<"cumulative" | "separate">("cumulative");
   const [period, setPeriod] = useState<"1d" | "7d" | "30d" | "90d">("30d");
 
@@ -18,6 +19,8 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
     const data = [];
     
     const totalValue = investments.reduce((sum, inv) => sum + (inv.quantity * inv.currentPrice), 0);
+    const currentUserShare = currentUser === "Ali" ? 0.25 : 0.75;
+    const userValue = totalValue * currentUserShare;
     
     for (let i = points - 1; i >= 0; i--) {
       const date = new Date();
@@ -38,21 +41,27 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
         rawDate: date.toISOString(),
       };
 
-      // Always generate individual investments data
-      investments.forEach((investment, index) => {
-        const investmentValue = investment.quantity * investment.currentPrice;
-        const trend = Math.sin((i / points + index * 0.5) * Math.PI) * 0.15; // Different trend per investment
-        const randomVariation = (Math.random() - 0.5) * 0.06;
-        const historicalValue = investmentValue * (1 + trend + randomVariation * (i / points));
-        dataPoint[investment.symbol] = Math.max(historicalValue, investmentValue * 0.85); // Minimum 85% of current value
-      });
-
       if (viewMode === "cumulative") {
-        // Also generate total portfolio data for cumulative view
-        const trend = Math.sin(i / points * Math.PI) * 0.1; // Slight upward trend
+        // Generate individual investments data for cumulative view
+        investments.forEach((investment, index) => {
+          const investmentValue = investment.quantity * investment.currentPrice;
+          const trend = Math.sin((i / points + index * 0.5) * Math.PI) * 0.15;
+          const randomVariation = (Math.random() - 0.5) * 0.06;
+          const historicalValue = investmentValue * (1 + trend + randomVariation * (i / points));
+          dataPoint[investment.symbol] = Math.max(historicalValue, investmentValue * 0.85);
+        });
+        
+        // Generate total portfolio data for cumulative view
+        const trend = Math.sin(i / points * Math.PI) * 0.1;
         const randomVariation = (Math.random() - 0.5) * 0.05;
         const historicalValue = totalValue * (1 + trend + randomVariation * (i / points));
-        dataPoint.portfolio = Math.max(historicalValue, totalValue * 0.9); // Minimum 90% of current value
+        dataPoint.portfolio = Math.max(historicalValue, totalValue * 0.9);
+      } else {
+        // Generate only user-specific data for separate view
+        const trend = Math.sin(i / points * Math.PI) * 0.12;
+        const randomVariation = (Math.random() - 0.5) * 0.08;
+        const historicalValue = userValue * (1 + trend + randomVariation * (i / points));
+        dataPoint.userPortfolio = Math.max(historicalValue, userValue * 0.88);
       }
       
       data.push(dataPoint);
@@ -144,9 +153,15 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
                 padding: '12px'
               }}
               formatter={(value: any, name: any) => {
-                const investment = investments.find(inv => inv.symbol === name);
-                const displayName = investment ? `${investment.name} (${investment.symbol})` : name === 'portfolio' ? 'Portfolio Totale' : name;
-                return [formatCurrency(value), displayName];
+                if (name === 'portfolio') {
+                  return [formatCurrency(value), 'Portfolio Totale'];
+                } else if (name === 'userPortfolio') {
+                  return [formatCurrency(value), `Portfolio ${currentUser}`];
+                } else {
+                  const investment = investments.find(inv => inv.symbol === name);
+                  const displayName = investment ? `${investment.name} (${investment.symbol})` : name;
+                  return [formatCurrency(value), displayName];
+                }
               }}
               labelFormatter={(label) => {
                 const dataPoint = chartData.find(d => d.date === label);
@@ -190,17 +205,14 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
                 />
               </>
             ) : (
-              investments.map((investment, index) => (
-                <Line
-                  key={investment.symbol}
-                  type="monotone"
-                  dataKey={investment.symbol}
-                  stroke={getColorForInvestment(index)}
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 5, fill: getColorForInvestment(index), stroke: "#ffffff", strokeWidth: 2 }}
-                />
-              ))
+              <Line
+                type="monotone"
+                dataKey="userPortfolio"
+                stroke="hsl(var(--primary))"
+                strokeWidth={3}
+                dot={false}
+                activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
+              />
             )}
           </LineChart>
         </ResponsiveContainer>

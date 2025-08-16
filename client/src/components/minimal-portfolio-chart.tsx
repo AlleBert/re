@@ -41,7 +41,13 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
         rawDate: date.toISOString(),
       };
 
-      if (viewMode === "cumulative") {
+      if (viewMode === "separate") {
+        // Generate only user-specific data for separate view
+        const trend = Math.sin(i / points * Math.PI) * 0.12;
+        const randomVariation = (Math.random() - 0.5) * 0.08;
+        const historicalValue = userValue * (1 + trend + randomVariation * (i / points));
+        dataPoint.userPortfolio = Math.max(historicalValue, userValue * 0.88);
+      } else {
         // Generate individual investments data for cumulative view
         investments.forEach((investment, index) => {
           const investmentValue = investment.quantity * investment.currentPrice;
@@ -56,12 +62,6 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
         const randomVariation = (Math.random() - 0.5) * 0.05;
         const historicalValue = totalValue * (1 + trend + randomVariation * (i / points));
         dataPoint.portfolio = Math.max(historicalValue, totalValue * 0.9);
-      } else {
-        // Generate only user-specific data for separate view
-        const trend = Math.sin(i / points * Math.PI) * 0.12;
-        const randomVariation = (Math.random() - 0.5) * 0.08;
-        const historicalValue = userValue * (1 + trend + randomVariation * (i / points));
-        dataPoint.userPortfolio = Math.max(historicalValue, userValue * 0.88);
       }
       
       data.push(dataPoint);
@@ -179,7 +179,16 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
               labelStyle={{ color: '#94a3b8', fontWeight: 'bold' }}
             />
             
-            {viewMode === "cumulative" ? (
+            {viewMode === "separate" ? (
+              <Line
+                type="monotone"
+                dataKey="userPortfolio"
+                stroke="hsl(var(--primary))"
+                strokeWidth={3}
+                dot={false}
+                activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
+              />
+            ) : (
               <>
                 {/* Individual investments with opacity */}
                 {investments.map((investment, index) => (
@@ -204,15 +213,6 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                   activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
                 />
               </>
-            ) : (
-              <Line
-                type="monotone"
-                dataKey="userPortfolio"
-                stroke="hsl(var(--primary))"
-                strokeWidth={3}
-                dot={false}
-                activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
-              />
             )}
           </LineChart>
         </ResponsiveContainer>

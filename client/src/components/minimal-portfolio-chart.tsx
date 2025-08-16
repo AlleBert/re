@@ -52,37 +52,53 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                 ? (i % 8 === 0 || i === 0) // ogni 8 giorni
                   ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
                   : ''
-                : (i % 24 === 0 || i === 0) // ogni 24 giorni per 1y
-                  ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+                : (i % 30 === 0 || i === 0) // ogni 30 giorni per 1y (circa 1 mese)
+                  ? date.toLocaleDateString('it-IT', { month: 'short' })
                   : '',
         // Per il tooltip, sempre mostra la data completa
         fullDate: period === "1d" 
           ? date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-          : date.toLocaleDateString('it-IT', { 
-              weekday: 'short', day: 'numeric', month: 'short'
-            }),
+          : period === "1y"
+            ? date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+            : date.toLocaleDateString('it-IT', { 
+                weekday: 'short', day: 'numeric', month: 'short'
+              }),
         rawDate: date.toISOString(),
       };
 
       if (viewMode === "separate") {
         // SEPARATE VIEW: Generate only user-specific data
+        // Usa un seed pseudo-casuale basato sull'indice per consistenza
+        const seed = (i * 1234567) % 1000000;
+        const pseudoRandom = (seed / 1000000) - 0.5; // tra -0.5 e 0.5
+        
         const trend = Math.sin(i / dataPoints * Math.PI) * 0.12;
-        const randomVariation = (Math.random() - 0.5) * 0.08;
+        const randomVariation = pseudoRandom * 0.08;
         const historicalValue = userValue * (1 + trend + randomVariation * (i / dataPoints));
         dataPoint.userPortfolio = Math.max(historicalValue, userValue * 0.88);
       } else {
         // CUMULATIVE VIEW: Generate individual investments + total portfolio
+        // Usa seed pseudo-casuali per consistenza
+        const baseSeed = (i * 1234567) % 1000000;
+        
         investments.forEach((investment, index) => {
           const investmentValue = investment.quantity * investment.currentPrice;
           const trend = Math.sin((i / dataPoints + index * 0.5) * Math.PI) * 0.15;
-          const randomVariation = (Math.random() - 0.5) * 0.06;
+          
+          // Seed diverso per ogni investimento
+          const invSeed = ((baseSeed + index * 999999) % 1000000);
+          const pseudoRandom = (invSeed / 1000000) - 0.5;
+          const randomVariation = pseudoRandom * 0.06;
+          
           const historicalValue = investmentValue * (1 + trend + randomVariation * (i / dataPoints));
           dataPoint[investment.symbol] = Math.max(historicalValue, investmentValue * 0.85);
         });
         
         // Generate total portfolio data for cumulative view
         const trend = Math.sin(i / dataPoints * Math.PI) * 0.1;
-        const randomVariation = (Math.random() - 0.5) * 0.05;
+        const portfolioSeed = ((baseSeed + 777777) % 1000000);
+        const pseudoRandom = (portfolioSeed / 1000000) - 0.5;
+        const randomVariation = pseudoRandom * 0.05;
         const historicalValue = totalValue * (1 + trend + randomVariation * (i / dataPoints));
         dataPoint.portfolio = Math.max(historicalValue, totalValue * 0.9);
       }

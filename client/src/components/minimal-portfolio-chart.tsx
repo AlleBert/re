@@ -150,7 +150,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
       </div>
 
       {/* Chart */}
-      <div className="h-80 w-full" style={{ padding: '8px' }}>
+      <div className="h-80 w-full" style={{ padding: '12px 20px 8px 8px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <XAxis 
@@ -164,7 +164,8 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
               }}
               interval={0}
               minTickGap={40}
-              height={35}
+              height={40}
+              tickMargin={12}
             />
             <YAxis 
               axisLine={false}
@@ -172,8 +173,8 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
               tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
               tickFormatter={formatCurrency}
               domain={['dataMin * 0.992', 'dataMax * 1.008']}
-              width={85}
-              tickMargin={8}
+              width={90}
+              tickMargin={12}
             />
             <Tooltip 
               contentStyle={{

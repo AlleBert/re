@@ -155,11 +155,13 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
             />
             <Tooltip 
               contentStyle={{
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                border: '1px solid #334155',
+                backgroundColor: 'hsl(var(--background))',
+                border: '1px solid hsl(var(--border))',
                 borderRadius: '8px',
-                color: '#e2e8f0',
-                padding: '12px'
+                color: 'hsl(var(--foreground))',
+                padding: '8px 12px',
+                fontSize: '14px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
               }}
               formatter={(value: any, name: any) => {
                 if (name === 'portfolio') {
@@ -185,7 +187,12 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                 }
                 return label;
               }}
-              labelStyle={{ color: '#94a3b8', fontWeight: 'bold' }}
+              labelStyle={{ 
+                color: 'hsl(var(--muted-foreground))', 
+                fontWeight: '500',
+                fontSize: '12px',
+                marginBottom: '4px'
+              }}
             />
             
             {viewMode === "separate" ? (
@@ -196,7 +203,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                 stroke="#3b82f6"
                 strokeWidth={3}
                 dot={false}
-                activeDot={{ r: 6, fill: "#3b82f6", strokeWidth: 2, stroke: "#ffffff" }}
+                activeDot={{ r: 4, fill: "#3b82f6", strokeWidth: 2, stroke: "hsl(var(--background))" }}
                 connectNulls={false}
               />
             ) : (
@@ -211,7 +218,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                     strokeWidth={1.5}
                     strokeOpacity={0.3}
                     dot={false}
-                    activeDot={{ r: 4, fill: getColorForInvestment(index), stroke: "#ffffff", strokeWidth: 1 }}
+                    activeDot={{ r: 3, fill: getColorForInvestment(index), stroke: "hsl(var(--background))", strokeWidth: 2 }}
                     connectNulls={false}
                   />
                 ))}
@@ -223,7 +230,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                   stroke="#3b82f6"
                   strokeWidth={4}
                   dot={false}
-                  activeDot={{ r: 6, fill: "#3b82f6", strokeWidth: 2, stroke: "#ffffff" }}
+                  activeDot={{ r: 5, fill: "#3b82f6", strokeWidth: 2, stroke: "hsl(var(--background))" }}
                   connectNulls={false}
                 />
               </>

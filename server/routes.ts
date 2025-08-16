@@ -159,6 +159,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sell investment endpoint
+  app.post("/api/investments/:id/sell", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { quantity, price, user } = req.body;
+      
+      if (!quantity || !price || !user) {
+        return res.status(400).json({ error: "Quantity, price, and user are required" });
+      }
+      
+      const result = await storage.sellInvestment(id, quantity, price, user);
+      
+      console.log(`Investment sold: ${quantity} units at ${price} each by ${user}`);
+      res.json(result);
+    } catch (error) {
+      console.error("Sell investment error:", error);
+      res.status(400).json({ error: error instanceof Error ? error.message : "Failed to sell investment" });
+    }
+  });
+
   // Transaction operations
   app.get("/api/transactions", async (req, res) => {
     try {

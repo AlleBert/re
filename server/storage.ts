@@ -13,6 +13,9 @@ export interface IStorage {
   getTransactions(): Promise<Transaction[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   
+  // Investment operations (buy/sell)
+  sellInvestment(id: string, quantity: number, price: number, user: string): Promise<{ investment: Investment | null; transaction: Transaction }>;
+  
   // Price update
   updateInvestmentPrice(id: string, newPrice: number, user: string): Promise<Investment | undefined>;
 }
@@ -170,6 +173,43 @@ export class MemStorage implements IStorage {
     return transaction;
   }
 
+  async sellInvestment(id: string, sellQuantity: number, sellPrice: number, user: string): Promise<{ investment: Investment | null; transaction: Transaction }> {
+    const existing = this.investments.get(id);
+    if (!existing) {
+      throw new Error('Investment not found');
+    }
+    
+    if (sellQuantity > existing.quantity) {
+      throw new Error('Cannot sell more than owned quantity');
+    }
+    
+    // Create sell transaction
+    const transaction = await this.createTransaction({
+      type: "sell",
+      assetSymbol: existing.symbol,
+      assetName: existing.name,
+      quantity: sellQuantity,
+      price: sellPrice,
+      total: sellQuantity * sellPrice,
+      user: user as "Ali" | "Alle",
+    });
+    
+    let updatedInvestment: Investment | null = null;
+    
+    if (sellQuantity === existing.quantity) {
+      // Selling all - remove investment
+      this.investments.delete(id);
+    } else {
+      // Partial sell - update quantity
+      const newQuantity = existing.quantity - sellQuantity;
+      updatedInvestment = await this.updateInvestment(id, { 
+        quantity: newQuantity 
+      }) || null;
+    }
+    
+    return { investment: updatedInvestment, transaction };
+  }
+  
   async updateInvestmentPrice(id: string, newPrice: number, user: string): Promise<Investment | undefined> {
     const investment = await this.updateInvestment(id, { currentPrice: newPrice });
     if (investment) {

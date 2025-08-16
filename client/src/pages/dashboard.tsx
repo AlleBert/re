@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { User, Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, PieChart, Sun, Moon, LogOut } from "lucide-react";
+import { User, Edit, Trash2, Plus, TrendingUp, TrendingDown, DollarSign, PieChart, Sun, Moon, LogOut, ShoppingCart, Minus, RefreshCw, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useTheme } from "@/components/theme-provider";
 import { InvestmentForm } from "@/components/investment-form";
 import { MinimalPortfolioChart } from "@/components/minimal-portfolio-chart";
@@ -37,6 +39,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [periodFilter, setPeriodFilter] = useState("30days");
   const [lastPriceUpdate, setLastPriceUpdate] = useState<number>(0);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [sellDialog, setSellDialog] = useState<{ open: boolean; investment: Investment | null }>({ open: false, investment: null });
+  const [sellQuantity, setSellQuantity] = useState("");
+  const [sellPrice, setSellPrice] = useState("");
   const queryClient = useQueryClient();
 
   // Fetch investments using React Query
@@ -93,6 +98,24 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     setNewPrice(investment.currentPrice.toString());
   };
 
+  const sellInvestmentMutation = useMutation({
+    mutationFn: async ({ id, quantity, price }: { id: string; quantity: number; price: number }) => {
+      const response = await apiRequest('POST', `/api/investments/${id}/sell`, { 
+        quantity, 
+        price, 
+        user: user.name 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+      setSellDialog({ open: false, investment: null });
+      setSellQuantity("");
+      setSellPrice("");
+    },
+  });
+
   const updatePriceMutation = useMutation({
     mutationFn: async ({ id, price }: { id: string; price: number }) => {
       const response = await apiRequest('PUT', `/api/investments/${id}`, { currentPrice: price });
@@ -132,6 +155,29 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     if (confirm("Sei sicuro di voler eliminare questo investimento?")) {
       deleteInvestmentMutation.mutate(investmentId);
     }
+  };
+
+  const handleSellInvestment = () => {
+    if (!sellDialog.investment || !sellQuantity || !sellPrice) return;
+    
+    const quantity = parseFloat(sellQuantity);
+    const price = parseFloat(sellPrice);
+    
+    if (isNaN(quantity) || isNaN(price) || quantity <= 0 || price <= 0) {
+      alert("Inserisci quantità e prezzo validi");
+      return;
+    }
+    
+    if (quantity > sellDialog.investment.quantity) {
+      alert(`Non puoi vendere più di ${sellDialog.investment.quantity} unità possedute`);
+      return;
+    }
+    
+    sellInvestmentMutation.mutate({
+      id: sellDialog.investment.id,
+      quantity,
+      price
+    });
   };
 
   const formatCurrency = (amount: number) => {
@@ -426,39 +472,100 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity size={20} className="text-slate-600 dark:text-slate-400" />
+                    Attività Recenti
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {transactions.slice(0, 5).map((transaction, index) => (
-                      <div key={`${transaction.id}-${transaction.timestamp}-${index}`} className="flex items-center justify-between py-2">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            transaction.type === 'buy' ? 'bg-green-100 dark:bg-green-900' :
-                            transaction.type === 'sell' ? 'bg-red-100 dark:bg-red-900' :
-                            'bg-blue-100 dark:bg-blue-900'
-                          }`}>
-                            <i className={`text-xs ${
-                              transaction.type === 'buy' ? 'fas fa-plus text-green-600 dark:text-green-400' :
-                              transaction.type === 'sell' ? 'fas fa-minus text-red-600 dark:text-red-400' :
-                              'fas fa-edit text-blue-600 dark:text-blue-400'
-                            }`} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-slate-900 dark:text-white">
-                              {transaction.type === 'buy' ? 'Added' : 
-                               transaction.type === 'sell' ? 'Sold' : 'Updated'} {transaction.assetSymbol}
-                            </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {format(new Date(transaction.timestamp), 'MMM dd, yyyy')}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
-                          {transaction.total ? formatCurrency(transaction.total) : formatCurrency(transaction.price)}
-                        </span>
+                    {transactions.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-slate-500 dark:text-slate-400">Nessuna attività recente</p>
                       </div>
-                    ))}
+                    ) : (
+                      transactions.slice(0, 5).map((transaction, index) => {
+                        const investment = investments.find(inv => inv.symbol === transaction.assetSymbol);
+                        const getTransactionIcon = () => {
+                          switch (transaction.type) {
+                            case 'buy':
+                              return <Plus size={14} className="text-green-600 dark:text-green-400" />;
+                            case 'sell':
+                              return <Minus size={14} className="text-red-600 dark:text-red-400" />;
+                            case 'price_update':
+                              return <RefreshCw size={14} className="text-blue-600 dark:text-blue-400" />;
+                            default:
+                              return <Activity size={14} className="text-slate-600 dark:text-slate-400" />;
+                          }
+                        };
+                        
+                        const getTransactionText = () => {
+                          const baseText = transaction.type === 'buy' ? 'Acquistato' : 
+                                         transaction.type === 'sell' ? 'Venduto' : 
+                                         transaction.type === 'price_update' ? 'Aggiornato prezzo' : 'Modificato';
+                          return `${baseText} ${transaction.assetSymbol}`;
+                        };
+                        
+                        const getAmountDisplay = () => {
+                          if (transaction.type === 'buy' || transaction.type === 'sell') {
+                            const quantity = transaction.quantity || 0;
+                            const total = transaction.total || (transaction.price * quantity);
+                            return (
+                              <div className="text-right">
+                                <div className="text-sm font-medium text-slate-900 dark:text-white">
+                                  {formatCurrency(total)}
+                                </div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                  {quantity} × {formatCurrency(transaction.price)}
+                                </div>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                              {formatCurrency(transaction.price)}
+                            </div>
+                          );
+                        };
+                        
+                        return (
+                          <div key={`${transaction.id}-${transaction.timestamp}-${index}`} className="flex items-center justify-between py-3 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                                transaction.type === 'buy' ? 'bg-green-100 dark:bg-green-900 shadow-sm' :
+                                transaction.type === 'sell' ? 'bg-red-100 dark:bg-red-900 shadow-sm' :
+                                'bg-blue-100 dark:bg-blue-900 shadow-sm'
+                              }`}>
+                                {getTransactionIcon()}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                  {getTransactionText()}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    {format(new Date(transaction.timestamp), 'dd MMM yyyy, HH:mm')}
+                                  </p>
+                                  {investment && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                                      {investment.name}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {getAmountDisplay()}
+                          </div>
+                        );
+                      })
+                    )}
+                    {transactions.length > 5 && (
+                      <div className="text-center pt-2">
+                        <button className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300">
+                          Vedi tutte le attività →
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -711,7 +818,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         </TableCell>
                         {user.isAdmin && (
                           <TableCell>
-                            <div className="flex space-x-2">
+                            <div className="flex space-x-1">
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -723,8 +830,18 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                onClick={() => setSellDialog({ open: true, investment })}
+                                title="Vendi investimento"
+                                className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
+                              >
+                                <Minus size={14} />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 onClick={() => handleDeleteInvestment(investment.id)}
                                 title="Elimina investimento"
+                                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                               >
                                 <Trash2 size={14} />
                               </Button>
@@ -836,6 +953,95 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           setEditingInvestment(null);
         }}
       />
+
+      {/* Sell Investment Dialog */}
+      <Dialog open={sellDialog.open} onOpenChange={(open) => setSellDialog({ open, investment: sellDialog.investment })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Minus className="w-5 h-5 text-orange-600" />
+              Vendi Investimento
+            </DialogTitle>
+          </DialogHeader>
+          
+          {sellDialog.investment && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <div className="text-sm font-medium text-slate-900 dark:text-white">
+                  {sellDialog.investment.name} ({sellDialog.investment.symbol})
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Possedute: {sellDialog.investment.quantity} unità a {formatCurrency(sellDialog.investment.avgPrice)}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sell-quantity">Quantità da vendere</Label>
+                  <Input
+                    id="sell-quantity"
+                    type="number"
+                    placeholder="0"
+                    value={sellQuantity}
+                    onChange={(e) => setSellQuantity(e.target.value)}
+                    max={sellDialog.investment.quantity}
+                    step="0.01"
+                  />
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    Max: {sellDialog.investment.quantity}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="sell-price">Prezzo per unità</Label>
+                  <Input
+                    id="sell-price"
+                    type="number"
+                    placeholder="0.00"
+                    value={sellPrice}
+                    onChange={(e) => setSellPrice(e.target.value)}
+                    step="0.01"
+                  />
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    Attuale: {formatCurrency(sellDialog.investment.currentPrice)}
+                  </div>
+                </div>
+              </div>
+              
+              {sellQuantity && sellPrice && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="text-sm font-medium text-green-800 dark:text-green-300">
+                    Totale vendita: {formatCurrency(parseFloat(sellQuantity) * parseFloat(sellPrice))}
+                  </div>
+                  <div className="text-xs text-green-600 dark:text-green-400">
+                    {parseFloat(sellQuantity)} × {formatCurrency(parseFloat(sellPrice))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSellDialog({ open: false, investment: null });
+                setSellQuantity("");
+                setSellPrice("");
+              }}
+            >
+              Annulla
+            </Button>
+            <Button 
+              onClick={handleSellInvestment}
+              disabled={sellInvestmentMutation.isPending || !sellQuantity || !sellPrice}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              {sellInvestmentMutation.isPending ? "Vendendo..." : "Conferma Vendita"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

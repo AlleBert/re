@@ -150,9 +150,12 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
       </div>
 
       {/* Chart */}
-      <div className="h-80 w-full" style={{ padding: '12px 20px 8px 8px' }}>
+      <div className="h-80 w-full" style={{ padding: '12px 35px 8px 8px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
+          <LineChart 
+            data={chartData}
+            margin={{ top: 5, right: 25, left: 5, bottom: 5 }}
+          >
             <XAxis 
               dataKey="date" 
               axisLine={false}

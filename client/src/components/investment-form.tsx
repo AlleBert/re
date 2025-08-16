@@ -100,6 +100,9 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
         if (!form.getValues('avgPrice')) {
           form.setValue('avgPrice', result.price);
         }
+        if (!form.getValues('currentPrice')) {
+          form.setValue('currentPrice', result.price);
+        }
       } else {
         setSymbolValidation({
           status: 'invalid',
@@ -136,6 +139,9 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
         // Auto-fill form fields if ISIN validation is successful
         form.setValue('name', result.name);
         form.setValue('symbol', result.symbol);
+        
+        // Also validate the symbol to get the current price
+        validateSymbol(result.symbol);
       } else {
         setIsinValidation({
           status: 'invalid',

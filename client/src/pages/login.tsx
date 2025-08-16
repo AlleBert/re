@@ -12,7 +12,7 @@ interface LoginProps {
 
 export default function Login({ onLogin }: LoginProps) {
   const { theme, setTheme } = useTheme();
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showPasswordField, setShowPasswordField] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState(false);
 
@@ -21,7 +21,7 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   const showPasswordPrompt = () => {
-    setShowPasswordModal(true);
+    setShowPasswordField(true);
     setPassword("");
     setPasswordError(false);
   };
@@ -29,10 +29,16 @@ export default function Login({ onLogin }: LoginProps) {
   const verifyPassword = () => {
     if (password === "0000") {
       onLogin({ name: "Alle", role: "Admin", isAdmin: true });
-      setShowPasswordModal(false);
+      setShowPasswordField(false);
     } else {
       setPasswordError(true);
     }
+  };
+
+  const cancelPasswordEntry = () => {
+    setShowPasswordField(false);
+    setPassword("");
+    setPasswordError(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -99,8 +105,8 @@ export default function Login({ onLogin }: LoginProps) {
 
             {/* Alle User Card */}
             <div
-              onClick={showPasswordPrompt}
-              className="cursor-pointer group bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600 rounded-2xl p-6 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border border-slate-200 dark:border-slate-600 hover:border-emerald-300 dark:hover:border-emerald-500"
+              onClick={!showPasswordField ? showPasswordPrompt : undefined}
+              className={`${!showPasswordField ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02]' : ''} group bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600 rounded-2xl p-6 transition-all duration-300 border border-slate-200 dark:border-slate-600 ${!showPasswordField ? 'hover:border-emerald-300 dark:hover:border-emerald-500' : 'border-emerald-300 dark:border-emerald-500'}`}
               data-testid="card-login-alle"
             >
               <div className="flex items-center space-x-4">
@@ -111,51 +117,56 @@ export default function Login({ onLogin }: LoginProps) {
                   <h3 className="font-bold text-lg text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Alle</h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Accesso Amministratore</p>
                 </div>
-                <Shield className="text-slate-400 group-hover:text-emerald-500 group-hover:scale-110 transition-all" size={18} />
+                {!showPasswordField && (
+                  <Shield className="text-slate-400 group-hover:text-emerald-500 group-hover:scale-110 transition-all" size={18} />
+                )}
               </div>
+              
+              {/* Inline password field */}
+              {showPasswordField && (
+                <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                  <Input
+                    type="password"
+                    placeholder="Inserisci password amministratore"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    autoFocus
+                    data-testid="input-admin-password"
+                  />
+                  
+                  {passwordError && (
+                    <p className="text-sm text-red-600 dark:text-red-400 animate-in fade-in duration-200">
+                      Password incorretta. Riprova.
+                    </p>
+                  )}
+                  
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={cancelPasswordEntry}
+                      className="flex-1"
+                      size="sm"
+                    >
+                      Annulla
+                    </Button>
+                    <Button 
+                      onClick={verifyPassword} 
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                      size="sm"
+                    >
+                      Accedi
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Password Modal */}
-      <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Admin Authentication</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-            
-            {passwordError && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                Incorrect password. Please try again.
-              </p>
-            )}
-            
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowPasswordModal(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button onClick={verifyPassword} className="flex-1">
-                Login
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }

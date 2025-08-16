@@ -273,72 +273,138 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
             {/* Portfolio Summary Cards */}
             {portfolio && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card>
+                <Card className="hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-l-4 border-l-blue-500">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Total Portfolio</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Portfolio Totale</p>
+                        <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                           {formatCurrency(portfolio.totalValue)}
                         </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Valore complessivo
+                        </p>
                       </div>
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="text-blue-600 dark:text-blue-400" size={20} />
+                      <div className="relative">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                          <TrendingUp className="text-white" size={22} strokeWidth={2.5} />
+                        </div>
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className={`hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-l-4 ${
+                  portfolio.totalGainLoss >= 0 ? 'border-l-green-500' : 'border-l-red-500'
+                }`}>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Total Gain/Loss</p>
-                        <p className={`text-2xl font-bold ${getGainLossColor(portfolio.totalGainLoss)}`}>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Guadagno/Perdita Totale</p>
+                        <p className={`text-3xl font-bold ${getGainLossColor(portfolio.totalGainLoss)}`}>
                           {portfolio.totalGainLoss >= 0 ? '+' : ''}{formatCurrency(portfolio.totalGainLoss)}
                         </p>
-                        <p className={`text-sm ${getGainLossColor(portfolio.gainLossPercentage)}`}>
+                        <p className={`text-sm font-semibold ${getGainLossColor(portfolio.gainLossPercentage)}`}>
                           {formatPercentage(portfolio.gainLossPercentage)}
                         </p>
                       </div>
-                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                        {portfolio.totalGainLoss >= 0 ? (
-                          <TrendingUp className="text-green-600 dark:text-green-400" size={20} />
-                        ) : (
-                          <TrendingDown className="text-red-600 dark:text-red-400" size={20} />
-                        )}
+                      <div className="relative">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg ${
+                          portfolio.totalGainLoss >= 0 
+                            ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                            : 'bg-gradient-to-br from-red-500 to-rose-600'
+                        }`}>
+                          {portfolio.totalGainLoss >= 0 ? (
+                            <TrendingUp className="text-white" size={22} strokeWidth={2.5} />
+                          ) : (
+                            <TrendingDown className="text-white" size={22} strokeWidth={2.5} />
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-l-4 border-l-emerald-500">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Alle's Share (75%)</p>
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Quota Alle (75%)</p>
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">
                           {formatCurrency(portfolio.alleShare)}
                         </p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            portfolio.totalGainLoss >= 0 
+                              ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400' 
+                              : 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
+                          }`}>
+                            {portfolio.totalGainLoss >= 0 ? '+' : ''}{formatCurrency(portfolio.alleShare * 0.75 * (portfolio.gainLossPercentage / 100))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex items-center justify-center">
-                        <i className="fas fa-user-crown text-emerald-600 dark:text-emerald-400" />
+                      <div className="flex items-center justify-center">
+                        <svg width="48" height="48" viewBox="0 0 48 48" className="transform hover:scale-110 transition-transform duration-200">
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="#e5e7eb" strokeWidth="4"/>
+                          <circle 
+                            cx="24" 
+                            cy="24" 
+                            r="20" 
+                            fill="none" 
+                            stroke="#10b981" 
+                            strokeWidth="4"
+                            strokeDasharray={`${2 * Math.PI * 20 * 0.75} ${2 * Math.PI * 20}`}
+                            strokeDashoffset={`${-2 * Math.PI * 20 * 0.25}`}
+                            className="rotate-[-90deg] origin-center"
+                            strokeLinecap="round"
+                          />
+                          <text x="24" y="28" textAnchor="middle" className="text-xs font-bold fill-emerald-600 dark:fill-emerald-400">
+                            75%
+                          </text>
+                        </svg>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-l-4 border-l-blue-500">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Ali's Share (25%)</p>
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Quota Ali (25%)</p>
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">
                           {formatCurrency(portfolio.aliShare)}
                         </p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            portfolio.totalGainLoss >= 0 
+                              ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400' 
+                              : 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
+                          }`}>
+                            {portfolio.totalGainLoss >= 0 ? '+' : ''}{formatCurrency(portfolio.aliShare * 0.25 * (portfolio.gainLossPercentage / 100))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                        <User className="text-blue-600 dark:text-blue-400" size={20} />
+                      <div className="flex items-center justify-center">
+                        <svg width="48" height="48" viewBox="0 0 48 48" className="transform hover:scale-110 transition-transform duration-200">
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="#e5e7eb" strokeWidth="4"/>
+                          <circle 
+                            cx="24" 
+                            cy="24" 
+                            r="20" 
+                            fill="none" 
+                            stroke="#3b82f6" 
+                            strokeWidth="4"
+                            strokeDasharray={`${2 * Math.PI * 20 * 0.25} ${2 * Math.PI * 20}`}
+                            strokeDashoffset={`0`}
+                            className="rotate-[-90deg] origin-center"
+                            strokeLinecap="round"
+                          />
+                          <text x="24" y="28" textAnchor="middle" className="text-xs font-bold fill-blue-600 dark:fill-blue-400">
+                            25%
+                          </text>
+                        </svg>
                       </div>
                     </div>
                   </CardContent>

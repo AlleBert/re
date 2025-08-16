@@ -128,7 +128,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const handleDeleteInvestment = (investmentId: string) => {
     if (!user.isAdmin) return;
     
-    if (confirm("Are you sure you want to delete this investment?")) {
+    if (confirm("Sei sicuro di voler eliminare questo investimento?")) {
       deleteInvestmentMutation.mutate(investmentId);
     }
   };

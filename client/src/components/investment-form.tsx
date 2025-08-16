@@ -53,25 +53,25 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       totalAmount: insertInvestmentSchema.shape.quantity.optional()
     })),
     defaultValues: editingInvestment ? {
-      name: editingInvestment.name,
-      symbol: editingInvestment.symbol,
-      isin: editingInvestment.isin,
-      category: editingInvestment.category,
-      quantity: editingInvestment.quantity,
-      avgPrice: editingInvestment.avgPrice,
-      currentPrice: editingInvestment.currentPrice,
-      totalAmount: undefined,
-      purchaseDate: editingInvestment.purchaseDate,
-      aliShare: editingInvestment.aliShare,
+      name: editingInvestment.name || "",
+      symbol: editingInvestment.symbol || "",
+      isin: editingInvestment.isin || "",
+      category: editingInvestment.category || "stocks",
+      quantity: editingInvestment.quantity || 0,
+      avgPrice: editingInvestment.avgPrice || 0,
+      currentPrice: editingInvestment.currentPrice || 0,
+      totalAmount: 0,
+      purchaseDate: editingInvestment.purchaseDate || new Date().toISOString().split('T')[0],
+      aliShare: editingInvestment.aliShare || 25,
     } : {
       name: "",
       symbol: "",
       isin: "",
       category: "stocks",
-      quantity: undefined,
-      avgPrice: undefined,
-      currentPrice: undefined,
-      totalAmount: undefined,
+      quantity: 0,
+      avgPrice: 0,
+      currentPrice: 0,
+      totalAmount: 0,
       purchaseDate: new Date().toISOString().split('T')[0],
       aliShare: 25,
     },
@@ -254,10 +254,12 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       let finalData: InsertInvestment = { ...data };
       delete (finalData as any).totalAmount;
 
-      if (inputMode === "total" && data.totalAmount && data.avgPrice) {
+      if (inputMode === "total" && data.totalAmount && data.avgPrice && data.totalAmount > 0 && data.avgPrice > 0) {
         finalData.quantity = data.totalAmount / data.avgPrice;
-      } else if (inputMode === "quantity" && data.quantity && data.avgPrice) {
+      } else if (inputMode === "quantity" && data.quantity && data.avgPrice && data.quantity > 0 && data.avgPrice > 0) {
         // Already set correctly
+      } else {
+        throw new Error('Per favore inserisci valori validi per quantità e prezzo');
       }
 
       // Set current price to average price initially

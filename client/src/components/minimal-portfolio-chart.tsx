@@ -190,20 +190,21 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
             
             {viewMode === "separate" ? (
               <Line
+                key="user-portfolio-line"
                 type="monotone"
                 dataKey="userPortfolio"
-                stroke="hsl(var(--primary))"
+                stroke="#3b82f6"
                 strokeWidth={3}
-                strokeOpacity={1}
                 dot={false}
-                activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
+                activeDot={{ r: 6, fill: "#3b82f6", strokeWidth: 2, stroke: "#ffffff" }}
+                connectNulls={false}
               />
             ) : (
               <>
                 {/* Individual investments with opacity */}
                 {investments.map((investment, index) => (
                   <Line
-                    key={`${investment.symbol}-bg`}
+                    key={`individual-${investment.symbol}`}
                     type="monotone"
                     dataKey={investment.symbol}
                     stroke={getColorForInvestment(index)}
@@ -211,17 +212,19 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                     strokeOpacity={0.3}
                     dot={false}
                     activeDot={{ r: 4, fill: getColorForInvestment(index), stroke: "#ffffff", strokeWidth: 1 }}
+                    connectNulls={false}
                   />
                 ))}
                 {/* Main portfolio line - prominent */}
                 <Line
+                  key="total-portfolio-line"
                   type="monotone"
                   dataKey="portfolio"
-                  stroke="hsl(var(--primary))"
+                  stroke="#3b82f6"
                   strokeWidth={4}
-                  strokeOpacity={1}
                   dot={false}
-                  activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
+                  activeDot={{ r: 6, fill: "#3b82f6", strokeWidth: 2, stroke: "#ffffff" }}
+                  connectNulls={false}
                 />
               </>
             )}

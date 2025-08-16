@@ -335,6 +335,8 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
             console.log('🚨 Current form errors:', form.formState.errors);
             console.log('📊 Current form values:', form.getValues());
             console.log('✅ Form is valid:', form.formState.isValid);
+            console.log('💰 CurrentPrice error details:', form.formState.errors.currentPrice);
+            console.log('💰 CurrentPrice value:', form.getValues('currentPrice'));
             form.handleSubmit(onSubmit)(e);
           }} className="space-y-4">
             <FormField

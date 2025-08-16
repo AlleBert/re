@@ -2,7 +2,10 @@ import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { User, Users } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { User, Users, Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { Investment } from "@shared/schema";
 
 interface MinimalPortfolioChartProps {
@@ -12,13 +15,36 @@ interface MinimalPortfolioChartProps {
 
 export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: MinimalPortfolioChartProps) {
   const [viewMode, setViewMode] = useState<"cumulative" | "separate">("cumulative");
-  const [period, setPeriod] = useState<"1d" | "7d" | "30d" | "90d" | "1y">("30d");
+  const [period, setPeriod] = useState<"1d" | "7d" | "30d" | "90d" | "1y" | "ytd" | "max">("30d");
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
+  const [showCustomCalendar, setShowCustomCalendar] = useState(false);
 
   const generateChartData = () => {
-    // Punti per i dati: molti più punti per dettaglio della linea
-    const dataPoints = period === "1d" ? 48 : period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 12;
-    // Punti per le etichette X: pochi per evitare sovrapposizioni
-    const labelPoints = period === "1d" ? 8 : period === "7d" ? 7 : period === "30d" ? 10 : period === "90d" ? 12 : 15;
+    // Calcola i punti dati basandosi sul periodo selezionato
+    let dataPoints, labelPoints;
+    
+    if (period === "1d") {
+      dataPoints = 48; labelPoints = 8;
+    } else if (period === "7d") {
+      dataPoints = 7; labelPoints = 7;
+    } else if (period === "30d") {
+      dataPoints = 30; labelPoints = 10;
+    } else if (period === "90d") {
+      dataPoints = 90; labelPoints = 12;
+    } else if (period === "1y") {
+      dataPoints = 12; labelPoints = 15;
+    } else if (period === "ytd") {
+      const now = new Date();
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      const daysSinceStart = Math.ceil((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+      dataPoints = Math.min(daysSinceStart, 365);
+      labelPoints = Math.min(Math.ceil(dataPoints / 30), 12);
+    } else if (period === "max") {
+      dataPoints = 730; // 2 anni di dati
+      labelPoints = 24;
+    } else {
+      dataPoints = 30; labelPoints = 10;
+    }
     const data = [];
     
     const totalValue = investments.reduce((sum, inv) => sum + (inv.quantity * inv.currentPrice), 0);
@@ -34,6 +60,16 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
       } else if (period === "1y") {
         // Per 1 anno: punti ogni mese (12 punti)
         date.setMonth(date.getMonth() - i);
+      } else if (period === "ytd") {
+        // Per YTD: dall'inizio dell'anno ad oggi
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const totalDays = Math.ceil((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+        const dayOffset = Math.floor((i * totalDays) / dataPoints);
+        date.setTime(startOfYear.getTime() + (dayOffset * 24 * 60 * 60 * 1000));
+      } else if (period === "max") {
+        // Per MAX: ultimi 2 anni
+        date.setDate(date.getDate() - i);
       } else {
         // Per altri periodi: punti ogni giorno
         date.setDate(date.getDate() - i);
@@ -55,11 +91,19 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                 ? (i % 8 === 0 || i === 0) // ogni 8 giorni
                   ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
                   : ''
-                : date.toLocaleDateString('it-IT', { month: 'short' }), // ogni mese per 1y
+                : period === "ytd"
+                  ? (i % Math.max(1, Math.floor(dataPoints / labelPoints)) === 0 || i === 0)
+                    ? date.toLocaleDateString('it-IT', { month: 'short' })
+                    : ''
+                  : period === "max"
+                    ? (i % Math.max(1, Math.floor(dataPoints / labelPoints)) === 0 || i === 0)
+                      ? date.toLocaleDateString('it-IT', { month: 'short', year: '2-digit' })
+                      : ''
+                    : date.toLocaleDateString('it-IT', { month: 'short' }), // ogni mese per 1y
         // Per il tooltip, sempre mostra la data completa
         fullDate: period === "1d" 
           ? date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-          : period === "1y"
+          : period === "1y" || period === "ytd" || period === "max"
             ? date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
             : date.toLocaleDateString('it-IT', { 
                 weekday: 'short', day: 'numeric', month: 'short'
@@ -183,26 +227,69 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
         </div>
         
         {/* Period Buttons */}
-        <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
-          {(["1d", "7d", "30d", "90d", "1y"] as const).map((p) => (
-            <Button
-              key={p}
-              variant={period === p ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setPeriod(p)}
-              className="h-8 px-3 text-xs"
-              data-testid={`button-period-${p}`}
-            >
-              {p === "1d" ? "1G" : p === "7d" ? "7G" : p === "30d" ? "30G" : p === "90d" ? "90G" : "1A"}
-            </Button>
-          ))}
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
+            {(["1d", "7d", "30d", "90d", "1y", "ytd", "max"] as const).map((p) => (
+              <Button
+                key={p}
+                variant={period === p ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setPeriod(p)}
+                className="h-8 px-2 text-xs font-medium"
+                data-testid={`button-period-${p}`}
+              >
+                {p === "1d" ? "1G" : p === "7d" ? "7G" : p === "30d" ? "30G" : p === "90d" ? "90G" : p === "1y" ? "1A" : p === "ytd" ? "YTD" : "MAX"}
+              </Button>
+            ))}
+          </div>
+          
+          {/* Custom Calendar Picker */}
+          <Popover open={showCustomCalendar} onOpenChange={setShowCustomCalendar}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                title="Seleziona intervallo personalizzato"
+                data-testid="button-custom-calendar"
+              >
+                <CalendarIcon className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-4" align="end">
+              <div className="space-y-3">
+                <div className="text-sm font-medium text-center text-slate-700 dark:text-slate-300">
+                  Seleziona Intervallo
+                </div>
+                <Calendar
+                  mode="range"
+                  selected={customDateRange}
+                  onSelect={(range) => {
+                    setCustomDateRange(range || { from: undefined, to: undefined });
+                    if (range?.from && range?.to) {
+                      // Implement custom range logic here if needed
+                      setShowCustomCalendar(false);
+                    }
+                  }}
+                  numberOfMonths={2}
+                  className="rounded-md border shadow-lg"
+                  disabled={(date) => date > new Date()}
+                />
+                {customDateRange.from && customDateRange.to && (
+                  <div className="text-xs text-center text-slate-600 dark:text-slate-400 pt-2 border-t">
+                    {format(customDateRange.from, 'dd MMM yyyy')} - {format(customDateRange.to, 'dd MMM yyyy')}
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
       {/* Performance Badge */}
       <div className="flex justify-between items-center mb-2">
         <div className="text-sm text-slate-600 dark:text-slate-400">
-          Performance {period === "1d" ? "giornaliera" : period === "7d" ? "settimanale" : period === "30d" ? "mensile" : period === "90d" ? "trimestrale" : "annuale"}:
+          Performance {period === "1d" ? "giornaliera" : period === "7d" ? "settimanale" : period === "30d" ? "mensile" : period === "90d" ? "trimestrale" : period === "1y" ? "annuale" : period === "ytd" ? "da inizio anno" : "totale"}:
         </div>
         <div className={`text-lg font-bold px-3 py-1 rounded-lg ${
           periodPerformance >= 0 

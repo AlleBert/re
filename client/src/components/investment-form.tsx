@@ -330,7 +330,13 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={(e) => {
+            console.log('📋 Form submit event triggered');
+            console.log('🚨 Current form errors:', form.formState.errors);
+            console.log('📊 Current form values:', form.getValues());
+            console.log('✅ Form is valid:', form.formState.isValid);
+            form.handleSubmit(onSubmit)(e);
+          }} className="space-y-4">
             <FormField
               control={form.control}
               name="name"

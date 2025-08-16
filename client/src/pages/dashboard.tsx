@@ -599,7 +599,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
           setEditingInvestment(null);
         }}
         onSuccess={() => {
-          loadData();
+          // Refetch investments and transactions data
+          queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
           setEditingInvestment(null);
         }}
       />

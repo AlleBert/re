@@ -48,10 +48,10 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
   };
 
   const getStatusText = () => {
-    if (!isConfigured) return "API non configurata";
+    if (!isConfigured) return "Dati simulati";
     if (!isActive) return "Aggiornamenti inattivi";
     if (timeSinceUpdate > 60) return "Disconnesso";
-    return "Attivo";
+    return "Live";
   };
 
   const getStatusIcon = () => {
@@ -77,8 +77,13 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
           </TooltipTrigger>
           <TooltipContent>
             <div className="text-sm space-y-1">
-              <div>API FMP: {isConfigured ? "Configurata" : "Non configurata"}</div>
+              <div>API Finnhub: {isConfigured ? "Configurata" : "Non configurata"}</div>
               <div>Aggiornamenti: {isActive ? "Attivi" : "Inattivi"}</div>
+              {!isConfigured && (
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Dati simulati localmente
+                </div>
+              )}
               {lastUpdate > 0 && (
                 <div className="flex items-center space-x-1">
                   <Clock className="h-3 w-3" />
@@ -87,7 +92,7 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
               )}
               {isConfigured && (
                 <div className="text-xs text-slate-500 dark:text-slate-400">
-                  Aggiornamenti ogni 30 secondi
+                  Aggiornamenti in tempo reale
                 </div>
               )}
             </div>

@@ -36,12 +36,12 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
     } else if (period === "ytd") {
       const now = new Date();
       const startOfYear = new Date(now.getFullYear(), 0, 1);
-      const daysSinceStart = Math.ceil((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
-      dataPoints = Math.min(daysSinceStart, 365);
-      labelPoints = Math.min(Math.ceil(dataPoints / 30), 12);
+      const monthsSinceStart = (now.getFullYear() - startOfYear.getFullYear()) * 12 + (now.getMonth() - startOfYear.getMonth()) + 1;
+      dataPoints = monthsSinceStart; // Un punto per ogni mese
+      labelPoints = dataPoints;
     } else if (period === "max") {
-      dataPoints = 730; // 2 anni di dati
-      labelPoints = 24;
+      dataPoints = 24; // 2 anni di dati mensili (24 mesi)
+      labelPoints = 12; // Un'etichetta ogni 2 mesi
     } else {
       dataPoints = 30; labelPoints = 10;
     }
@@ -61,15 +61,13 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
         // Per 1 anno: punti ogni mese (12 punti)
         date.setMonth(date.getMonth() - i);
       } else if (period === "ytd") {
-        // Per YTD: dall'inizio dell'anno ad oggi
-        const now = new Date();
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const totalDays = Math.ceil((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
-        const dayOffset = Math.floor((i * totalDays) / dataPoints);
-        date.setTime(startOfYear.getTime() + (dayOffset * 24 * 60 * 60 * 1000));
+        // Per YTD: dall'inizio dell'anno ad oggi, un punto per mese
+        const startOfYear = new Date(date.getFullYear(), 0, 1);
+        date.setTime(startOfYear.getTime());
+        date.setMonth(date.getMonth() + (dataPoints - 1 - i));
       } else if (period === "max") {
-        // Per MAX: ultimi 2 anni
-        date.setDate(date.getDate() - i);
+        // Per MAX: ultimi 2 anni, un punto per mese
+        date.setMonth(date.getMonth() - i);
       } else {
         // Per altri periodi: punti ogni giorno
         date.setDate(date.getDate() - i);

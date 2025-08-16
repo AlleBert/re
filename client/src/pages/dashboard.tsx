@@ -52,9 +52,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
 
   // Update local state when API data changes
   useEffect(() => {
-    setInvestments(investmentsData);
-    setTransactions(transactionsData);
-    setPortfolio(LocalStorageService.calculatePortfolioSummary(investmentsData));
+    setInvestments(investmentsData as Investment[]);
+    setTransactions(transactionsData as Transaction[]);
+    setPortfolio(LocalStorageService.calculatePortfolioSummary(investmentsData as Investment[]));
   }, [investmentsData, transactionsData]);
 
   useEffect(() => {

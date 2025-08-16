@@ -276,6 +276,9 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       // Set current price to average price initially
       finalData.currentPrice = finalData.avgPrice;
       
+      // Debug: Log the data being sent
+      console.log('Sending investment data:', finalData);
+      
       if (editingInvestment) {
         // Update existing investment via API
         await updateInvestmentMutation.mutateAsync({ 
@@ -284,7 +287,9 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
         });
       } else {
         // Add new investment via API
-        await createInvestmentMutation.mutateAsync(finalData);
+        console.log('About to create investment with data:', finalData);
+        const result = await createInvestmentMutation.mutateAsync(finalData);
+        console.log('Investment creation result:', result);
       }
 
       form.reset();

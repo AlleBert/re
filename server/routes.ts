@@ -101,8 +101,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/investments", async (req, res) => {
     try {
+      console.log('🔍 Received investment data:', JSON.stringify(req.body, null, 2));
       const validatedData = insertInvestmentSchema.parse(req.body);
+      console.log('✅ Validated data:', JSON.stringify(validatedData, null, 2));
       const investment = await storage.createInvestment(validatedData);
+      console.log('💾 Created investment:', JSON.stringify(investment, null, 2));
       
       // Also create a transaction for this purchase
       await storage.createTransaction({

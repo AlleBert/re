@@ -33,11 +33,11 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
       const dataPoint: any = {
         date: period === "1d" 
           ? date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-          : date.toLocaleDateString('it-IT', { 
-              month: 'short', 
-              day: 'numeric',
-              ...(period === "90d" && { year: '2-digit' })
-            }),
+          : period === "7d"
+            ? date.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })
+            : period === "30d"
+              ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+              : date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: '2-digit' }),
         rawDate: date.toISOString(),
       };
 
@@ -148,10 +148,23 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
           <LineChart data={chartData}>
             <XAxis 
               dataKey="date" 
-              hide={true}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tickFormatter={(value) => {
+                if (period === '1d') return value; // Already formatted as HH:MM
+                return value; // Already formatted to avoid overlaps
+              }}
+              interval={period === '1d' ? 'preserveStartEnd' : period === '7d' ? 0 : 'preserveStartEnd'}
+              minTickGap={period === '1d' ? 30 : period === '7d' ? 20 : 40}
             />
             <YAxis 
-              hide={true}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tickFormatter={formatCurrency}
+              domain={['dataMin * 0.99', 'dataMax * 1.01']}
+              width={80}
             />
             <Tooltip 
               contentStyle={{
@@ -161,7 +174,9 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                 color: 'hsl(var(--foreground))',
                 padding: '8px 12px',
                 fontSize: '14px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                opacity: '0.96',
+                backdropFilter: 'blur(8px)'
               }}
               formatter={(value: any, name: any) => {
                 if (name === 'portfolio') {

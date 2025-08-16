@@ -36,6 +36,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
   const [historyFilter, setHistoryFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState("30days");
   const [lastPriceUpdate, setLastPriceUpdate] = useState<number>(0);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch investments using React Query
@@ -384,11 +385,73 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   <CardTitle>Asset Allocation</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col lg:flex-row items-center space-y-6 lg:space-y-0 lg:space-x-6">
-                    {/* Donut Chart */}
+                  <div className="flex items-start space-x-6">
+                    {/* Category Details - Left Side */}
+                    <div className="flex-1 space-y-3">
+                      {['stocks', 'etf', 'crypto', 'bonds'].map((category) => {
+                        const categoryInvestments = investments.filter(inv => inv.category === category);
+                        const categoryValue = categoryInvestments.reduce((sum, inv) => 
+                          sum + (inv.quantity * inv.currentPrice), 0
+                        );
+                        const percentage = portfolio ? (categoryValue / portfolio.totalValue) * 100 : 0;
+                        
+                        if (percentage === 0) return null;
+                        
+                        const getCategoryInfo = (cat: string) => {
+                          const infoMap: Record<string, { icon: string; name: string; color: string }> = {
+                            stocks: { icon: '📈', name: 'Azioni', color: 'bg-blue-500' },
+                            etf: { icon: '📊', name: 'ETF', color: 'bg-green-500' },
+                            crypto: { icon: '₿', name: 'Crypto', color: 'bg-orange-500' },
+                            bonds: { icon: '🏦', name: 'Obbligazioni', color: 'bg-purple-500' },
+                          };
+                          return infoMap[cat] || { icon: '💰', name: cat, color: 'bg-gray-500' };
+                        };
+                        
+                        const info = getCategoryInfo(category);
+                        const isHovered = hoveredCategory === category;
+                        
+                        return (
+                          <div 
+                            key={category}
+                            className={`flex items-center justify-between p-4 rounded-lg transition-all duration-300 cursor-pointer ${
+                              isHovered 
+                                ? 'bg-slate-100 dark:bg-slate-600 shadow-md scale-[1.02]' 
+                                : 'bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600'
+                            }`}
+                            onMouseEnter={() => setHoveredCategory(category)}
+                            onMouseLeave={() => setHoveredCategory(null)}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-10 h-10 ${info.color} rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg ${
+                                isHovered ? 'scale-110' : ''
+                              } transition-transform duration-300`}>
+                                {info.icon}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-slate-900 dark:text-white">
+                                  {info.name}
+                                </div>
+                                <div className="text-sm text-slate-600 dark:text-slate-400">
+                                  {formatCurrency(categoryValue)}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={`text-2xl font-bold transition-colors duration-300 ${
+                              isHovered 
+                                ? 'text-slate-900 dark:text-white' 
+                                : 'text-slate-700 dark:text-slate-300'
+                            }`}>
+                              {percentage.toFixed(1)}%
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Donut Chart - Right Side */}
                     <div className="flex-shrink-0">
-                      <div className="relative w-40 h-40">
-                        <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
+                      <div className="relative w-48 h-48">
+                        <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 100 100">
                           {(() => {
                             const data = ['stocks', 'etf', 'crypto', 'bonds'].map((category) => {
                               const categoryInvestments = investments.filter(inv => inv.category === category);
@@ -410,17 +473,17 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                             };
                             
                             let currentAngle = 0;
-                            const radius = 45;
-                            const strokeWidth = 8;
+                            const radius = 40;
+                            const strokeWidth = 12;
                             const center = 50;
                             const circumference = 2 * Math.PI * radius;
                             
                             return data.map((item, index) => {
                               const angle = (item.percentage / 100) * 360;
                               const strokeDasharray = (item.percentage / 100) * circumference;
-                              const strokeDashoffset = circumference - strokeDasharray;
                               const rotation = currentAngle;
                               currentAngle += angle;
+                              const isHovered = hoveredCategory === item.category;
                               
                               return (
                                 <circle
@@ -430,15 +493,19 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                                   r={radius}
                                   fill="transparent"
                                   stroke={getChartColor(item.category)}
-                                  strokeWidth={strokeWidth}
+                                  strokeWidth={isHovered ? strokeWidth + 2 : strokeWidth}
                                   strokeDasharray={`${strokeDasharray} ${circumference}`}
                                   strokeDashoffset={0}
                                   strokeLinecap="round"
+                                  opacity={hoveredCategory && !isHovered ? 0.3 : 1}
+                                  className="cursor-pointer"
                                   style={{
                                     transform: `rotate(${rotation}deg)`,
                                     transformOrigin: `${center}px ${center}px`,
-                                    transition: 'all 0.6s ease-in-out'
+                                    transition: 'all 0.3s ease-in-out'
                                   }}
+                                  onMouseEnter={() => setHoveredCategory(item.category)}
+                                  onMouseLeave={() => setHoveredCategory(null)}
                                 />
                               );
                             });
@@ -447,54 +514,11 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="text-center">
                             <div className="text-sm text-slate-600 dark:text-slate-400">Portfolio</div>
-                            <div className="text-lg font-bold text-slate-900 dark:text-white">
+                            <div className="text-xl font-bold text-slate-900 dark:text-white">
                               {formatCurrency(portfolio?.totalValue || 0)}
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                    
-                    {/* Category Cards */}
-                    <div className="flex-1 w-full">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {['stocks', 'etf', 'crypto', 'bonds'].map((category) => {
-                          const categoryInvestments = investments.filter(inv => inv.category === category);
-                          const categoryValue = categoryInvestments.reduce((sum, inv) => 
-                            sum + (inv.quantity * inv.currentPrice), 0
-                          );
-                          const percentage = portfolio ? (categoryValue / portfolio.totalValue) * 100 : 0;
-                          
-                          if (percentage === 0) return null;
-                          
-                          const getCategoryInfo = (cat: string) => {
-                            const infoMap: Record<string, { icon: string; name: string; color: string }> = {
-                              stocks: { icon: '📈', name: 'Azioni', color: 'bg-blue-500' },
-                              etf: { icon: '📊', name: 'ETF', color: 'bg-green-500' },
-                              crypto: { icon: '₿', name: 'Crypto', color: 'bg-orange-500' },
-                              bonds: { icon: '🏦', name: 'Obbligazioni', color: 'bg-purple-500' },
-                            };
-                            return infoMap[cat] || { icon: '💰', name: cat, color: 'bg-gray-500' };
-                          };
-                          
-                          const info = getCategoryInfo(category);
-                          
-                          return (
-                            <div key={category} className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
-                              <div className={`w-8 h-8 ${info.color} rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md`}>
-                                {info.icon}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-slate-900 dark:text-white text-sm truncate">
-                                  {info.name}
-                                </div>
-                                <div className="text-lg font-bold text-slate-700 dark:text-slate-300">
-                                  {percentage.toFixed(1)}%
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
                       </div>
                     </div>
                   </div>

@@ -200,7 +200,24 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Investment Tracker</h1>
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200">
+                    <TrendingUp className="h-5 w-5 text-white" strokeWidth={2.5} />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <h1 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+                    Investment Tracker
+                  </h1>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium tracking-wide">
+                    PORTFOLIO MANAGER
+                  </p>
+                </div>
+              </div>
               <Badge variant="secondary" className="text-xs">
                 {user.role}
               </Badge>

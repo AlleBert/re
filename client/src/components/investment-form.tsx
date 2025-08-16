@@ -237,6 +237,10 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
   });
 
   const onSubmit = async (data: InsertInvestment & { totalAmount?: number }) => {
+    console.log('🚀 Form submit started with data:', data);
+    console.log('🔍 Form errors:', form.formState.errors);
+    console.log('🎯 Symbol validation status:', symbolValidation.status);
+    
     setIsSubmitting(true);
     try {
       // Validate symbol before submitting if validation failed
@@ -257,16 +261,22 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       // Set current price to average price initially
       finalData.currentPrice = finalData.avgPrice;
       
+      console.log('📝 Final data to send:', finalData);
+      
       if (editingInvestment) {
+        console.log('🔄 Updating existing investment...');
         // Update existing investment via API
         await updateInvestmentMutation.mutateAsync({ 
           id: editingInvestment.id, 
           data: finalData 
         });
       } else {
+        console.log('➕ Creating new investment...');
         // Add new investment via API
         await createInvestmentMutation.mutateAsync(finalData);
       }
+      
+      console.log('✅ Investment saved successfully!');
 
       form.reset();
       setSymbolValidation({ status: 'idle' });

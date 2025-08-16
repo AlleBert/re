@@ -36,6 +36,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const quote = await serverFinnhubService.getQuote(symbol);
       if (!quote) {
+        // For European symbols, return a placeholder response instead of 404
+        if (symbol.toUpperCase().includes('.L') || symbol.toUpperCase().includes('.PA') || symbol.toUpperCase().includes('.MI')) {
+          return res.json({
+            symbol: symbol.toUpperCase(),
+            name: symbol.toUpperCase(),
+            price: 0,
+            changesPercentage: 0,
+            change: 0,
+            dayLow: 0,
+            dayHigh: 0,
+            open: 0,
+            previousClose: 0,
+            currency: symbol.toUpperCase().endsWith('.L') ? 'GBP' : 'EUR',
+            exchange: symbol.toUpperCase().endsWith('.L') ? 'London Stock Exchange' : 'European Exchange',
+            error: 'Real-time price data not available for this market in the free tier. You can still track this investment with manual price updates.'
+          });
+        }
         return res.status(404).json({ error: "Quote not found" });
       }
       res.json(quote);

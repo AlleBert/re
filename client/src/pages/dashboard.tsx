@@ -387,7 +387,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                 <CardContent>
                   <div className="flex items-start space-x-6">
                     {/* Category Details - Left Side */}
-                    <div className="flex-1 space-y-3">
+                    <div className="flex-1 space-y-3 max-w-[60%]">
                       {['stocks', 'etf', 'crypto', 'bonds'].map((category) => {
                         const categoryInvestments = investments.filter(inv => inv.category === category);
                         const categoryValue = categoryInvestments.reduce((sum, inv) => 
@@ -449,9 +449,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     </div>
                     
                     {/* Donut Chart - Right Side */}
-                    <div className="flex-shrink-0">
-                      <div className="relative w-48 h-48">
-                        <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 100 100">
+                    <div className="flex-shrink-0 w-[40%] flex justify-center">
+                      <div className="relative w-56 h-56">
+                        <svg className="w-56 h-56 transform -rotate-90" viewBox="0 0 100 100">
                           {(() => {
                             const data = ['stocks', 'etf', 'crypto', 'bonds'].map((category) => {
                               const categoryInvestments = investments.filter(inv => inv.category === category);
@@ -485,36 +485,67 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                               currentAngle += angle;
                               const isHovered = hoveredCategory === item.category;
                               
+                              // Calculate path coordinates for click area
+                              const startAngle = (rotation * Math.PI) / 180;
+                              const endAngle = ((rotation + angle) * Math.PI) / 180;
+                              const innerRadius = radius - strokeWidth / 2;
+                              const outerRadius = radius + strokeWidth / 2;
+                              
+                              const x1 = center + innerRadius * Math.cos(startAngle);
+                              const y1 = center + innerRadius * Math.sin(startAngle);
+                              const x2 = center + outerRadius * Math.cos(startAngle);
+                              const y2 = center + outerRadius * Math.sin(startAngle);
+                              const x3 = center + outerRadius * Math.cos(endAngle);
+                              const y3 = center + outerRadius * Math.sin(endAngle);
+                              const x4 = center + innerRadius * Math.cos(endAngle);
+                              const y4 = center + innerRadius * Math.sin(endAngle);
+                              
+                              const largeArcFlag = angle > 180 ? 1 : 0;
+                              
+                              const pathData = [
+                                `M ${x1} ${y1}`,
+                                `L ${x2} ${y2}`,
+                                `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${x3} ${y3}`,
+                                `L ${x4} ${y4}`,
+                                `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`,
+                                'Z'
+                              ].join(' ');
+                              
                               return (
-                                <circle
-                                  key={item.category}
-                                  cx={center}
-                                  cy={center}
-                                  r={radius}
-                                  fill="transparent"
-                                  stroke={getChartColor(item.category)}
-                                  strokeWidth={isHovered ? strokeWidth + 2 : strokeWidth}
-                                  strokeDasharray={`${strokeDasharray} ${circumference}`}
-                                  strokeDashoffset={0}
-                                  strokeLinecap="round"
-                                  opacity={hoveredCategory && !isHovered ? 0.3 : 1}
-                                  className="cursor-pointer"
-                                  style={{
-                                    transform: `rotate(${rotation}deg)`,
-                                    transformOrigin: `${center}px ${center}px`,
-                                    transition: 'all 0.3s ease-in-out'
-                                  }}
-                                  onMouseEnter={() => setHoveredCategory(item.category)}
-                                  onMouseLeave={() => setHoveredCategory(null)}
-                                  onClick={() => {
-                                    setHoveredCategory(hoveredCategory === item.category ? null : item.category);
-                                  }}
-                                />
+                                <g key={item.category}>
+                                  <circle
+                                    cx={center}
+                                    cy={center}
+                                    r={radius}
+                                    fill="transparent"
+                                    stroke={getChartColor(item.category)}
+                                    strokeWidth={isHovered ? strokeWidth + 2 : strokeWidth}
+                                    strokeDasharray={`${strokeDasharray} ${circumference}`}
+                                    strokeDashoffset={0}
+                                    strokeLinecap="round"
+                                    opacity={hoveredCategory && !isHovered ? 0.3 : 1}
+                                    style={{
+                                      transform: `rotate(${rotation}deg)`,
+                                      transformOrigin: `${center}px ${center}px`,
+                                      transition: 'all 0.3s ease-in-out'
+                                    }}
+                                  />
+                                  <path
+                                    d={pathData}
+                                    fill="transparent"
+                                    className="cursor-pointer"
+                                    onMouseEnter={() => setHoveredCategory(item.category)}
+                                    onMouseLeave={() => setHoveredCategory(null)}
+                                    onClick={() => {
+                                      setHoveredCategory(hoveredCategory === item.category ? null : item.category);
+                                    }}
+                                  />
+                                </g>
                               );
                             });
                           })()}
                         </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="text-center">
                             <div className="text-sm text-slate-600 dark:text-slate-400">Portfolio</div>
                             <div className="text-xl font-bold text-slate-900 dark:text-white">

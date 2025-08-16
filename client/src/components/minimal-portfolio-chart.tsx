@@ -16,7 +16,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
 
   const generateChartData = () => {
     // Punti per i dati: molti più punti per dettaglio della linea
-    const dataPoints = period === "1d" ? 48 : period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 365;
+    const dataPoints = period === "1d" ? 48 : period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 12;
     // Punti per le etichette X: pochi per evitare sovrapposizioni
     const labelPoints = period === "1d" ? 8 : period === "7d" ? 7 : period === "30d" ? 10 : period === "90d" ? 12 : 15;
     const data = [];
@@ -31,6 +31,9 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
         // Per 1 giorno: punti ogni 30 minuti (48 punti)
         const minutesBack = i * 30;
         date.setMinutes(date.getMinutes() - minutesBack);
+      } else if (period === "1y") {
+        // Per 1 anno: punti ogni mese (12 punti)
+        date.setMonth(date.getMonth() - i);
       } else {
         // Per altri periodi: punti ogni giorno
         date.setDate(date.getDate() - i);
@@ -52,9 +55,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                 ? (i % 8 === 0 || i === 0) // ogni 8 giorni
                   ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
                   : ''
-                : (i % 30 === 0 || i === 0) // ogni 30 giorni per 1y (circa 1 mese)
-                  ? date.toLocaleDateString('it-IT', { month: 'short' })
-                  : '',
+                : date.toLocaleDateString('it-IT', { month: 'short' }), // ogni mese per 1y
         // Per il tooltip, sempre mostra la data completa
         fullDate: period === "1d" 
           ? date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })

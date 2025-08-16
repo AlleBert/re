@@ -413,7 +413,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         return (
                           <div 
                             key={category}
-                            className={`flex items-center justify-between p-4 rounded-lg transition-all duration-300 cursor-pointer ${
+                            className={`flex items-center justify-between p-3 rounded-lg transition-all duration-300 cursor-pointer ${
                               isHovered 
                                 ? 'bg-slate-100 dark:bg-slate-600 shadow-md scale-[1.02]' 
                                 : 'bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600'
@@ -422,21 +422,21 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                             onMouseLeave={() => setHoveredCategory(null)}
                           >
                             <div className="flex items-center space-x-3">
-                              <div className={`w-10 h-10 ${info.color} rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg ${
+                              <div className={`w-8 h-8 ${info.color} rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md ${
                                 isHovered ? 'scale-110' : ''
                               } transition-transform duration-300`}>
                                 {info.icon}
                               </div>
                               <div>
-                                <div className="font-semibold text-slate-900 dark:text-white">
+                                <div className="font-medium text-slate-900 dark:text-white text-sm">
                                   {info.name}
                                 </div>
-                                <div className="text-sm text-slate-600 dark:text-slate-400">
+                                <div className="text-xs text-slate-600 dark:text-slate-400">
                                   {formatCurrency(categoryValue)}
                                 </div>
                               </div>
                             </div>
-                            <div className={`text-2xl font-bold transition-colors duration-300 ${
+                            <div className={`text-lg font-bold transition-colors duration-300 ${
                               isHovered 
                                 ? 'text-slate-900 dark:text-white' 
                                 : 'text-slate-700 dark:text-slate-300'
@@ -450,8 +450,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     
                     {/* Donut Chart - Right Side */}
                     <div className="flex-shrink-0">
-                      <div className="relative w-40 h-40">
-                        <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
+                      <div className="relative w-48 h-48">
+                        <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 100 100">
                           {(() => {
                             const data = ['stocks', 'etf', 'crypto', 'bonds'].map((category) => {
                               const categoryInvestments = investments.filter(inv => inv.category === category);
@@ -473,8 +473,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                             };
                             
                             let currentAngle = 0;
-                            const radius = 35;
-                            const strokeWidth = 10;
+                            const radius = 40;
+                            const strokeWidth = 12;
                             const center = 50;
                             const circumference = 2 * Math.PI * radius;
                             
@@ -506,7 +506,9 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                                   }}
                                   onMouseEnter={() => setHoveredCategory(item.category)}
                                   onMouseLeave={() => setHoveredCategory(null)}
-                                  onClick={() => setHoveredCategory(hoveredCategory === item.category ? null : item.category)}
+                                  onClick={() => {
+                                    setHoveredCategory(hoveredCategory === item.category ? null : item.category);
+                                  }}
                                 />
                               );
                             });
@@ -514,8 +516,8 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="text-center">
-                            <div className="text-xs text-slate-600 dark:text-slate-400">Portfolio</div>
-                            <div className="text-lg font-bold text-slate-900 dark:text-white">
+                            <div className="text-sm text-slate-600 dark:text-slate-400">Portfolio</div>
+                            <div className="text-xl font-bold text-slate-900 dark:text-white">
                               {formatCurrency(portfolio?.totalValue || 0)}
                             </div>
                           </div>

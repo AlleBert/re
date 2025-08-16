@@ -254,21 +254,23 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       let finalData: InsertInvestment = { ...data };
       delete (finalData as any).totalAmount;
 
-      if (inputMode === "total" && data.totalAmount && data.avgPrice && data.totalAmount > 0 && data.avgPrice > 0) {
-        finalData.quantity = data.totalAmount / data.avgPrice;
-        // avgPrice is already set correctly
-      } else if (inputMode === "quantity" && data.quantity && data.avgPrice && data.quantity > 0 && data.avgPrice > 0) {
-        // Already set correctly
-      } else {
-        const missing = [];
-        if (inputMode === "total") {
-          if (!data.totalAmount || data.totalAmount <= 0) missing.push('totale acquistato');
-          if (!data.avgPrice || data.avgPrice <= 0) missing.push('prezzo');
-        } else {
-          if (!data.quantity || data.quantity <= 0) missing.push('quantità');
-          if (!data.avgPrice || data.avgPrice <= 0) missing.push('prezzo');
+      if (inputMode === "total") {
+        // Modalità totale acquistato: calcola quantità
+        if (!data.totalAmount || data.totalAmount <= 0) {
+          throw new Error('Per favore inserisci il totale acquistato');
         }
-        throw new Error(`Per favore inserisci: ${missing.join(', ')}`);
+        if (!data.avgPrice || data.avgPrice <= 0) {
+          throw new Error('Per favore inserisci il prezzo per azione');
+        }
+        finalData.quantity = data.totalAmount / data.avgPrice;
+      } else {
+        // Modalità quantità + prezzo: usa valori diretti
+        if (!data.quantity || data.quantity <= 0) {
+          throw new Error('Per favore inserisci la quantità');
+        }
+        if (!data.avgPrice || data.avgPrice <= 0) {
+          throw new Error('Per favore inserisci il prezzo per azione');
+        }
       }
 
       // Set current price to average price initially
@@ -584,7 +586,11 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                   type="button"
                   variant={inputMode === "quantity" ? "default" : "outline"}
                   size="default"
-                  onClick={() => setInputMode("quantity")}
+                  onClick={() => {
+                    setInputMode("quantity");
+                    // Reset conflicting fields
+                    form.setValue('totalAmount', 0);
+                  }}
                   className="h-12 text-sm"
                 >
                   <div className="text-center">
@@ -596,7 +602,11 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
                   type="button"
                   variant={inputMode === "total" ? "default" : "outline"}
                   size="default"
-                  onClick={() => setInputMode("total")}
+                  onClick={() => {
+                    setInputMode("total");
+                    // Reset conflicting fields
+                    form.setValue('quantity', 0);
+                  }}
                   className="h-12 text-sm"
                 >
                   <div className="text-center">

@@ -150,11 +150,11 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
       </div>
 
       {/* Chart */}
-      <div className="h-80 w-full" style={{ padding: '12px 35px 8px 8px' }}>
+      <div className="h-80 w-full" style={{ padding: '8px 15px 8px 4px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart 
             data={chartData}
-            margin={{ top: 5, right: 25, left: 5, bottom: 5 }}
+            margin={{ top: 8, right: 15, left: 2, bottom: 8 }}
           >
             <XAxis 
               dataKey="date" 
@@ -176,8 +176,8 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
               tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
               tickFormatter={formatCurrency}
               domain={['dataMin * 0.992', 'dataMax * 1.008']}
-              width={90}
-              tickMargin={12}
+              width={75}
+              tickMargin={8}
             />
             <Tooltip 
               contentStyle={{

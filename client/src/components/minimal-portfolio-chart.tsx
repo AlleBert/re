@@ -36,8 +36,8 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
     } else if (period === "ytd") {
       const now = new Date();
       const startOfYear = new Date(now.getFullYear(), 0, 1);
-      const monthsSinceStart = (now.getFullYear() - startOfYear.getFullYear()) * 12 + (now.getMonth() - startOfYear.getMonth()) + 1;
-      dataPoints = monthsSinceStart; // Un punto per ogni mese
+      const monthsSinceStart = (now.getFullYear() - startOfYear.getFullYear()) * 12 + (now.getMonth() - startOfYear.getMonth());
+      dataPoints = monthsSinceStart + 2; // Mesi completi + inizio anno + oggi
       labelPoints = dataPoints;
     } else if (period === "max") {
       dataPoints = 24; // 2 anni di dati mensili (24 mesi)
@@ -52,7 +52,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
     const userValue = totalValue * currentUserShare;
     
     for (let i = dataPoints - 1; i >= 0; i--) {
-      const date = new Date();
+      let date = new Date();
       if (period === "1d") {
         // Per 1 giorno: punti ogni 30 minuti (48 punti)
         const minutesBack = i * 30;
@@ -61,10 +61,16 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
         // Per 1 anno: punti ogni mese (12 punti)
         date.setMonth(date.getMonth() - i);
       } else if (period === "ytd") {
-        // Per YTD: dall'inizio dell'anno ad oggi, un punto per mese
-        const startOfYear = new Date(date.getFullYear(), 0, 1);
-        date.setTime(startOfYear.getTime());
-        date.setMonth(date.getMonth() + (dataPoints - 1 - i));
+        // Per YTD: dall'inizio dell'anno ad oggi
+        if (i === 0) {
+          // Ultimo punto: oggi - mantieni la data corrente
+          // date è già inizializzata come new Date()
+        } else {
+          // Altri punti: primo di ogni mese dall'inizio dell'anno
+          const startOfYear = new Date(date.getFullYear(), 0, 1);
+          date.setTime(startOfYear.getTime());
+          date.setMonth(date.getMonth() + (dataPoints - 1 - i));
+        }
       } else if (period === "max") {
         // Per MAX: ultimi 2 anni, un punto per mese
         date.setMonth(date.getMonth() - i);
@@ -263,7 +269,10 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                   mode="range"
                   selected={customDateRange}
                   onSelect={(range) => {
-                    setCustomDateRange(range || { from: undefined, to: undefined });
+                    setCustomDateRange({
+                      from: range?.from,
+                      to: range?.to
+                    });
                     if (range?.from && range?.to) {
                       // Implement custom range logic here if needed
                       setShowCustomCalendar(false);

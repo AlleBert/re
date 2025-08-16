@@ -1,4 +1,4 @@
-import { User, Sun, Moon } from "lucide-react";
+import { User, Sun, Moon, ChevronRight, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,8 +46,8 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-900">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
         <CardContent className="p-8">
           {/* Theme Toggle */}
           <div className="flex justify-end mb-6">
@@ -67,46 +67,53 @@ export default function Login({ onLogin }: LoginProps) {
           </div>
 
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent mb-2">
               Investment Tracker
             </h1>
             <p className="text-slate-600 dark:text-slate-400">
-              Select your account to continue
+              Scegli il tuo account per continuare
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Ali User Card */}
             <div
               onClick={loginAsAli}
-              className="cursor-pointer group bg-slate-50 dark:bg-slate-700 rounded-xl p-6 hover:bg-slate-100 dark:hover:bg-slate-600 transition-all duration-200 border-2 border-transparent hover:border-primary"
+              className="cursor-pointer group bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600 rounded-2xl p-6 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500"
+              data-testid="card-login-ali"
             >
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
-                  <User className="text-white" size={20} />
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-blue-200 dark:group-hover:shadow-blue-900 transition-shadow">
+                  <User className="text-white" size={22} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Ali</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Viewer Access</p>
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Ali</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Accesso Visualizzazione</p>
                 </div>
-                <i className="fas fa-arrow-right text-slate-400 group-hover:text-primary transition-colors" />
+                <ChevronRight className="text-slate-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" size={20} />
               </div>
             </div>
 
             {/* Alle User Card */}
             <div
               onClick={showPasswordPrompt}
-              className="cursor-pointer group bg-slate-50 dark:bg-slate-700 rounded-xl p-6 hover:bg-slate-100 dark:hover:bg-slate-600 transition-all duration-200 border-2 border-transparent hover:border-primary"
+              className="cursor-pointer group bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600 rounded-2xl p-6 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border border-slate-200 dark:border-slate-600 hover:border-emerald-300 dark:hover:border-emerald-500"
+              data-testid="card-login-alle"
             >
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
-                  <i className="fas fa-user-crown text-white text-lg" />
+                <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-emerald-200 dark:group-hover:shadow-emerald-900 transition-shadow">
+                  <Shield className="text-white" size={22} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900 dark:text-white">Alle</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Admin Access</p>
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">Alle</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Accesso Amministratore</p>
                 </div>
-                <i className="fas fa-lock text-slate-400 group-hover:text-primary transition-colors" />
+                <Shield className="text-slate-400 group-hover:text-emerald-500 group-hover:scale-110 transition-all" size={18} />
               </div>
             </div>
           </div>

@@ -11,42 +11,48 @@ interface MinimalPortfolioChartProps {
 
 export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProps) {
   const [viewMode, setViewMode] = useState<"cumulative" | "separate">("cumulative");
-  const [period, setPeriod] = useState<"7d" | "30d" | "90d">("30d");
+  const [period, setPeriod] = useState<"1d" | "7d" | "30d" | "90d">("30d");
 
   const generateChartData = () => {
-    const points = period === "7d" ? 7 : period === "30d" ? 30 : 90;
+    const points = period === "1d" ? 24 : period === "7d" ? 7 : period === "30d" ? 30 : 90;
     const data = [];
     
     const totalValue = investments.reduce((sum, inv) => sum + (inv.quantity * inv.currentPrice), 0);
     
     for (let i = points - 1; i >= 0; i--) {
       const date = new Date();
-      date.setDate(date.getDate() - i);
+      if (period === "1d") {
+        date.setHours(date.getHours() - i);
+      } else {
+        date.setDate(date.getDate() - i);
+      }
       
       const dataPoint: any = {
-        date: date.toLocaleDateString('it-IT', { 
-          month: 'short', 
-          day: 'numeric',
-          ...(period === "90d" && { year: '2-digit' })
-        }),
+        date: period === "1d" 
+          ? date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+          : date.toLocaleDateString('it-IT', { 
+              month: 'short', 
+              day: 'numeric',
+              ...(period === "90d" && { year: '2-digit' })
+            }),
         rawDate: date.toISOString(),
       };
 
+      // Always generate individual investments data
+      investments.forEach((investment, index) => {
+        const investmentValue = investment.quantity * investment.currentPrice;
+        const trend = Math.sin((i / points + index * 0.5) * Math.PI) * 0.15; // Different trend per investment
+        const randomVariation = (Math.random() - 0.5) * 0.06;
+        const historicalValue = investmentValue * (1 + trend + randomVariation * (i / points));
+        dataPoint[investment.symbol] = Math.max(historicalValue, investmentValue * 0.85); // Minimum 85% of current value
+      });
+
       if (viewMode === "cumulative") {
-        // Simulate historical variation for total portfolio (±5%) with trend
+        // Also generate total portfolio data for cumulative view
         const trend = Math.sin(i / points * Math.PI) * 0.1; // Slight upward trend
         const randomVariation = (Math.random() - 0.5) * 0.05;
         const historicalValue = totalValue * (1 + trend + randomVariation * (i / points));
         dataPoint.portfolio = Math.max(historicalValue, totalValue * 0.9); // Minimum 90% of current value
-      } else {
-        // Show individual investments with more varied patterns
-        investments.forEach((investment, index) => {
-          const investmentValue = investment.quantity * investment.currentPrice;
-          const trend = Math.sin((i / points + index * 0.5) * Math.PI) * 0.15; // Different trend per investment
-          const randomVariation = (Math.random() - 0.5) * 0.06;
-          const historicalValue = investmentValue * (1 + trend + randomVariation * (i / points));
-          dataPoint[investment.symbol] = Math.max(historicalValue, investmentValue * 0.85); // Minimum 85% of current value
-        });
       }
       
       data.push(dataPoint);
@@ -103,7 +109,7 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
         
         {/* Period Buttons */}
         <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
-          {(["7d", "30d", "90d"] as const).map((p) => (
+          {(["1d", "7d", "30d", "90d"] as const).map((p) => (
             <Button
               key={p}
               variant={period === p ? "default" : "ghost"}
@@ -112,7 +118,7 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
               className="h-8 px-3 text-xs"
               data-testid={`button-period-${p}`}
             >
-              {p === "7d" ? "7G" : p === "30d" ? "30G" : "90G"}
+              {p === "1d" ? "1G" : p === "7d" ? "7G" : p === "30d" ? "30G" : "90G"}
             </Button>
           ))}
         </div>
@@ -159,14 +165,30 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
             />
             
             {viewMode === "cumulative" ? (
-              <Line
-                type="monotone"
-                dataKey="portfolio"
-                stroke="hsl(var(--primary))"
-                strokeWidth={3}
-                dot={{ r: 3, fill: "hsl(var(--primary))" }}
-                activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
-              />
+              <>
+                {/* Individual investments with opacity */}
+                {investments.map((investment, index) => (
+                  <Line
+                    key={`${investment.symbol}-bg`}
+                    type="monotone"
+                    dataKey={investment.symbol}
+                    stroke={getColorForInvestment(index)}
+                    strokeWidth={1.5}
+                    strokeOpacity={0.3}
+                    dot={false}
+                    activeDot={{ r: 4, fill: getColorForInvestment(index), stroke: "#ffffff", strokeWidth: 1 }}
+                  />
+                ))}
+                {/* Main portfolio line - prominent */}
+                <Line
+                  type="monotone"
+                  dataKey="portfolio"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={4}
+                  dot={false}
+                  activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 2, stroke: "#ffffff" }}
+                />
+              </>
             ) : (
               investments.map((investment, index) => (
                 <Line
@@ -175,7 +197,7 @@ export function MinimalPortfolioChart({ investments }: MinimalPortfolioChartProp
                   dataKey={investment.symbol}
                   stroke={getColorForInvestment(index)}
                   strokeWidth={2.5}
-                  dot={{ r: 2, fill: getColorForInvestment(index) }}
+                  dot={false}
                   activeDot={{ r: 5, fill: getColorForInvestment(index), stroke: "#ffffff", strokeWidth: 2 }}
                 />
               ))

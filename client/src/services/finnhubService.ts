@@ -47,6 +47,7 @@ interface FormattedQuote {
   currency: string;
   exchange: string;
   marketCap?: number;
+  error?: string;
 }
 
 interface FormattedSearchResult {
@@ -128,6 +129,14 @@ class FinnhubService {
   async getQuote(symbol: string): Promise<FormattedQuote | null> {
     try {
       const quote = await this.makeRequest<FormattedQuote>(`/quote/${symbol.toUpperCase()}`, {});
+      
+      // If we get a quote with an error message, it means the data is limited
+      if (quote && quote.error) {
+        console.warn(`Quote limitation for ${symbol}: ${quote.error}`);
+        // Still return the quote but with the error info
+        return quote;
+      }
+      
       return quote;
     } catch (error) {
       console.error(`Failed to get quote for ${symbol}:`, error);

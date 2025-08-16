@@ -196,31 +196,102 @@ class ServerFinnhubService {
 
   async getQuote(symbol: string) {
     try {
-      // Only get quote, skip profile to reduce API calls
-      const quote = await this.makeRequest<FinnhubQuote>('/quote', { symbol: symbol.toUpperCase() });
+      // Try multiple symbol formats for better compatibility
+      const symbolVariants = this.getSymbolVariants(symbol);
       
-      if (!quote || quote.c === undefined || quote.c === 0) {
-        return null;
+      for (const variant of symbolVariants) {
+        try {
+          const quote = await this.makeRequest<FinnhubQuote>('/quote', { symbol: variant });
+          
+          if (quote && quote.c !== undefined && quote.c !== 0) {
+            return {
+              symbol: symbol.toUpperCase(),
+              name: symbol.toUpperCase(),
+              price: quote.c,
+              changesPercentage: quote.dp || 0,
+              change: quote.d || 0,
+              dayLow: quote.l || 0,
+              dayHigh: quote.h || 0,
+              open: quote.o || 0,
+              previousClose: quote.pc || 0,
+              currency: this.getCurrencyFromSymbol(symbol),
+              exchange: this.getExchangeFromSymbol(symbol),
+              marketCap: undefined
+            };
+          }
+        } catch (variantError) {
+          // Continue to next variant if this one fails
+          console.log(`Variant ${variant} failed, trying next...`);
+          continue;
+        }
       }
-
+      
+      // If all variants fail, return a helpful message instead of null
+      console.log(`All symbol variants failed for ${symbol}. This might be due to API limitations on European markets.`);
       return {
         symbol: symbol.toUpperCase(),
-        name: symbol.toUpperCase(), // Use symbol as name for now
-        price: quote.c,
-        changesPercentage: quote.dp || 0,
-        change: quote.d || 0,
-        dayLow: quote.l || 0,
-        dayHigh: quote.h || 0,
-        open: quote.o || 0,
-        previousClose: quote.pc || 0,
-        currency: 'USD',
-        exchange: '',
-        marketCap: undefined
+        name: symbol.toUpperCase(),
+        price: 0,
+        changesPercentage: 0,
+        change: 0,
+        dayLow: 0,
+        dayHigh: 0,
+        open: 0,
+        previousClose: 0,
+        currency: this.getCurrencyFromSymbol(symbol),
+        exchange: this.getExchangeFromSymbol(symbol),
+        marketCap: undefined,
+        error: 'Price data temporarily unavailable - this may be due to API limitations on European markets'
       };
+      
     } catch (error) {
       console.error(`Failed to get quote for ${symbol}:`, error);
       return null;
     }
+  }
+
+  private getSymbolVariants(symbol: string): string[] {
+    const upperSymbol = symbol.toUpperCase();
+    const variants = [upperSymbol];
+    
+    // For European symbols, try without exchange suffix
+    if (upperSymbol.includes('.')) {
+      const baseSymbol = upperSymbol.split('.')[0];
+      variants.push(baseSymbol);
+    }
+    
+    // For London Stock Exchange, try alternative formats
+    if (upperSymbol.endsWith('.L')) {
+      const baseSymbol = upperSymbol.replace('.L', '');
+      variants.push(`${baseSymbol}.LON`);
+      variants.push(`${baseSymbol}:LN`);
+    }
+    
+    return variants;
+  }
+
+  private getCurrencyFromSymbol(symbol: string): string {
+    const upperSymbol = symbol.toUpperCase();
+    
+    if (upperSymbol.endsWith('.L') || upperSymbol.endsWith('.LON')) return 'GBP';
+    if (upperSymbol.endsWith('.PA') || upperSymbol.endsWith('.PAR')) return 'EUR';
+    if (upperSymbol.endsWith('.MI') || upperSymbol.endsWith('.MIL')) return 'EUR';
+    if (upperSymbol.endsWith('.DE') || upperSymbol.endsWith('.ETR')) return 'EUR';
+    if (upperSymbol.endsWith('.AS') || upperSymbol.endsWith('.AMS')) return 'EUR';
+    
+    return 'USD'; // Default
+  }
+
+  private getExchangeFromSymbol(symbol: string): string {
+    const upperSymbol = symbol.toUpperCase();
+    
+    if (upperSymbol.endsWith('.L')) return 'London Stock Exchange';
+    if (upperSymbol.endsWith('.PA')) return 'Euronext Paris';
+    if (upperSymbol.endsWith('.MI')) return 'Borsa Italiana';
+    if (upperSymbol.endsWith('.DE')) return 'XETRA';
+    if (upperSymbol.endsWith('.AS')) return 'Euronext Amsterdam';
+    
+    return 'NASDAQ'; // Default
   }
 
   async validateSymbol(symbol: string) {

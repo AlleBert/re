@@ -15,8 +15,8 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
   const [period, setPeriod] = useState<"1d" | "7d" | "30d" | "90d">("30d");
 
   const generateChartData = () => {
-    // Ottimizziamo i punti per avere etichette più pulite
-    const points = period === "1d" ? 8 : period === "7d" ? 7 : period === "30d" ? 15 : 18;
+    // Ottimizziamo i punti per avere etichette più pulite e distanziate
+    const points = period === "1d" ? 8 : period === "7d" ? 7 : period === "30d" ? 10 : 12;
     const data = [];
     
     const totalValue = investments.reduce((sum, inv) => sum + (inv.quantity * inv.currentPrice), 0);
@@ -30,10 +30,10 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
         const hoursBack = i * 3;
         date.setHours(date.getHours() - hoursBack);
       } else {
-        // Per altri periodi: distribuisci uniformemente
+        // Per altri periodi: distribuisci uniformemente con più spazio
         const daysBack = period === "7d" ? i : 
-                        period === "30d" ? i * 2 : // ogni 2 giorni per 30d
-                        i * 5; // ogni 5 giorni per 90d
+                        period === "30d" ? i * 3 : // ogni 3 giorni per 30d (10 punti)
+                        i * 8; // ogni 8 giorni per 90d (12 punti)
         date.setDate(date.getDate() - daysBack);
       }
       
@@ -150,28 +150,30 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
       </div>
 
       {/* Chart */}
-      <div className="h-80 w-full">
+      <div className="h-80 w-full" style={{ padding: '8px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <XAxis 
               dataKey="date" 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
               tickFormatter={(value) => {
-                if (period === '1d') return value; // Already formatted as HH:MM
-                return value; // Already formatted to avoid overlaps
+                if (period === '1d') return value;
+                return value;
               }}
               interval={0}
-              minTickGap={30}
+              minTickGap={40}
+              height={35}
             />
             <YAxis 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
               tickFormatter={formatCurrency}
-              domain={['dataMin * 0.995', 'dataMax * 1.005']}
-              width={80}
+              domain={['dataMin * 0.992', 'dataMax * 1.008']}
+              width={85}
+              tickMargin={8}
             />
             <Tooltip 
               contentStyle={{
@@ -180,7 +182,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                 borderRadius: '8px',
                 color: 'hsl(var(--foreground))',
                 padding: '8px 12px',
-                fontSize: '14px',
+                fontSize: '13px',
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                 opacity: '0.96',
                 backdropFilter: 'blur(8px)'

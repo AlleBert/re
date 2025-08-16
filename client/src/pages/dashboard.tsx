@@ -13,6 +13,8 @@ import { InvestmentForm } from "@/components/investment-form";
 import { MinimalPortfolioChart } from "@/components/minimal-portfolio-chart";
 import { RealTimeStatus } from "@/components/real-time-status";
 import { LocalStorageService } from "@/lib/storage";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { realTimePriceService } from "@/services/realTimePriceService";
 import { Investment, Transaction, PortfolioSummary } from "@shared/schema";
 import { User as UserType } from "@/lib/types";
@@ -80,13 +82,27 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     }
   }, [investments, user.isAdmin]);
 
-  const loadData = () => {
-    const investmentData = LocalStorageService.getInvestments();
-    const transactionData = LocalStorageService.getTransactions();
-    
-    setInvestments(investmentData);
-    setTransactions(transactionData);
-    setPortfolio(LocalStorageService.calculatePortfolioSummary(investmentData));
+  const loadData = async () => {
+    try {
+      // Try to load from API first
+      const [investmentResponse, transactionResponse] = await Promise.all([
+        fetch('/api/investments').then(r => r.json()).catch(() => []),
+        fetch('/api/transactions').then(r => r.json()).catch(() => [])
+      ]);
+      
+      setInvestments(investmentResponse);
+      setTransactions(transactionResponse);
+      setPortfolio(LocalStorageService.calculatePortfolioSummary(investmentResponse));
+    } catch (error) {
+      console.error('Failed to load from API, falling back to localStorage:', error);
+      // Fallback to localStorage if API fails
+      const investmentData = LocalStorageService.getInvestments();
+      const transactionData = LocalStorageService.getTransactions();
+      
+      setInvestments(investmentData);
+      setTransactions(transactionData);
+      setPortfolio(LocalStorageService.calculatePortfolioSummary(investmentData));
+    }
   };
 
   const handleEditInvestment = (investment: Investment) => {

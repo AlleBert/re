@@ -11,7 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Check, AlertCircle, Search } from "lucide-react";
-import { LocalStorageService } from "@/lib/storage";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { realTimePriceService } from "@/services/realTimePriceService";
 import { finnhubService } from "@/services/finnhubService";
 
@@ -24,6 +25,7 @@ interface InvestmentFormProps {
 
 export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: InvestmentFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
   const [inputMode, setInputMode] = useState<"quantity" | "total">("quantity");
   const [symbolValidation, setSymbolValidation] = useState<{
     status: 'idle' | 'validating' | 'valid' | 'invalid';
@@ -209,6 +211,31 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
+  // Mutations for API calls
+  const createInvestmentMutation = useMutation({
+    mutationFn: async (data: InsertInvestment) => {
+      const response = await apiRequest('POST', '/api/investments', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate and refetch investments
+      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+    }
+  });
+
+  const updateInvestmentMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Investment> }) => {
+      const response = await apiRequest('PUT', `/api/investments/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate and refetch investments
+      queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+    }
+  });
+
   const onSubmit = async (data: InsertInvestment & { totalAmount?: number }) => {
     setIsSubmitting(true);
     try {
@@ -231,12 +258,16 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       finalData.currentPrice = finalData.avgPrice;
       
       if (editingInvestment) {
-        // Update existing investment
-        LocalStorageService.updateInvestment(editingInvestment.id, finalData);
+        // Update existing investment via API
+        await updateInvestmentMutation.mutateAsync({ 
+          id: editingInvestment.id, 
+          data: finalData 
+        });
       } else {
-        // Add new investment
-        LocalStorageService.addInvestment(finalData);
+        // Add new investment via API
+        await createInvestmentMutation.mutateAsync(finalData);
       }
+
       form.reset();
       setSymbolValidation({ status: 'idle' });
       setIsinValidation({ status: 'idle' });
@@ -245,8 +276,8 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Error adding investment:", error);
-      alert(error instanceof Error ? error.message : "Errore nell'aggiungere l'investimento");
+      console.error("Error saving investment:", error);
+      alert(error instanceof Error ? error.message : "Errore nel salvare l'investimento");
     } finally {
       setIsSubmitting(false);
     }

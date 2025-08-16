@@ -15,7 +15,8 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
   const [period, setPeriod] = useState<"1d" | "7d" | "30d" | "90d">("30d");
 
   const generateChartData = () => {
-    const points = period === "1d" ? 24 : period === "7d" ? 7 : period === "30d" ? 30 : 90;
+    // Ottimizziamo i punti per avere etichette più pulite
+    const points = period === "1d" ? 8 : period === "7d" ? 7 : period === "30d" ? 15 : 18;
     const data = [];
     
     const totalValue = investments.reduce((sum, inv) => sum + (inv.quantity * inv.currentPrice), 0);
@@ -25,9 +26,15 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
     for (let i = points - 1; i >= 0; i--) {
       const date = new Date();
       if (period === "1d") {
-        date.setHours(date.getHours() - i);
+        // Per 1 giorno: campiona ogni 3 ore per avere etichette pulite (8 punti = 0h, 3h, 6h, 9h, 12h, 15h, 18h, 21h)
+        const hoursBack = i * 3;
+        date.setHours(date.getHours() - hoursBack);
       } else {
-        date.setDate(date.getDate() - i);
+        // Per altri periodi: distribuisci uniformemente
+        const daysBack = period === "7d" ? i : 
+                        period === "30d" ? i * 2 : // ogni 2 giorni per 30d
+                        i * 5; // ogni 5 giorni per 90d
+        date.setDate(date.getDate() - daysBack);
       }
       
       const dataPoint: any = {
@@ -37,7 +44,7 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
             ? date.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })
             : period === "30d"
               ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
-              : date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: '2-digit' }),
+              : date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }),
         rawDate: date.toISOString(),
       };
 
@@ -155,15 +162,15 @@ export function MinimalPortfolioChart({ investments, currentUser = "Alle" }: Min
                 if (period === '1d') return value; // Already formatted as HH:MM
                 return value; // Already formatted to avoid overlaps
               }}
-              interval={period === '1d' ? 'preserveStartEnd' : period === '7d' ? 0 : 'preserveStartEnd'}
-              minTickGap={period === '1d' ? 30 : period === '7d' ? 20 : 40}
+              interval={0}
+              minTickGap={30}
             />
             <YAxis 
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
               tickFormatter={formatCurrency}
-              domain={['dataMin * 0.99', 'dataMax * 1.01']}
+              domain={['dataMin * 0.995', 'dataMax * 1.005']}
               width={80}
             />
             <Tooltip 

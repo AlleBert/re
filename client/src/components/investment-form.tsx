@@ -256,6 +256,8 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
 
   const onSubmit = async (data: InsertInvestment & { totalAmount?: number }) => {
     console.log('📝 FORM: Starting form submission with data:', data);
+    console.log('🔍 FORM: Form errors before submit:', form.formState.errors);
+    console.log('📋 FORM: Form is valid:', form.formState.isValid);
     setIsSubmitting(true);
     try {
       // Validate symbol before submitting if validation failed
@@ -767,7 +769,16 @@ export function InvestmentForm({ open, editingInvestment, onClose, onSuccess }: 
               <Button type="button" variant="outline" onClick={onClose} className="flex-1 h-11">
                 Annulla
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="flex-1 h-11 bg-blue-600 hover:bg-blue-700">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className="flex-1 h-11 bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  console.log('🔔 BUTTON: Submit button clicked!');
+                  console.log('📋 BUTTON: Form errors:', form.formState.errors);
+                  console.log('📝 BUTTON: Form values:', form.getValues());
+                }}
+              >
                 {isSubmitting ? (
                   <div className="flex items-center space-x-2">
                     <Loader2 className="h-4 w-4 animate-spin" />

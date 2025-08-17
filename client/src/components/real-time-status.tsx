@@ -14,8 +14,6 @@ interface RealTimeStatusProps {
 export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusProps) {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [isConfigured, setIsConfigured] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const [mode, setMode] = useState<string>("online");
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -27,25 +25,10 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
 
   useEffect(() => {
     const checkConfiguration = async () => {
-      try {
-        const response = await fetch('/api/finnhub/status');
-        const status = await response.json();
-        setIsConfigured(status.configured);
-        setIsOnline(status.online);
-        setMode(status.mode);
-      } catch (error) {
-        console.error('Error checking status:', error);
-        setIsConfigured(false);
-        setIsOnline(false);
-        setMode("offline");
-      }
+      const configured = await finnhubService.isConfigured();
+      setIsConfigured(configured);
     };
-    
     checkConfiguration();
-    
-    // Check status periodically
-    const interval = setInterval(checkConfiguration, 30000); // Check every 30 seconds
-    return () => clearInterval(interval);
   }, []);
 
   const isActive = realTimePriceService.isActive();
@@ -58,15 +41,13 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
   };
 
   const getStatusColor = () => {
-    if (!isOnline) return "destructive";
-    if (!isConfigured) return "secondary";
+    if (!isConfigured) return "destructive";
     if (!isActive) return "secondary";
     if (timeSinceUpdate > 60) return "secondary";
     return "default";
   };
 
   const getStatusText = () => {
-    if (!isOnline) return "Offline";
     if (!isConfigured) return "Dati simulati";
     if (!isActive) return "Aggiornamenti inattivi";
     if (timeSinceUpdate > 60) return "Disconnesso";
@@ -74,7 +55,7 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
   };
 
   const getStatusIcon = () => {
-    if (!isOnline || !isConfigured || !isActive || timeSinceUpdate > 60) {
+    if (!isConfigured || !isActive || timeSinceUpdate > 60) {
       return <WifiOff className="h-3 w-3" />;
     }
     return <Wifi className="h-3 w-3" />;
@@ -96,17 +77,11 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
           </TooltipTrigger>
           <TooltipContent>
             <div className="text-sm space-y-1">
-              <div>Modalità: {mode === "offline" ? "Offline" : "Online"}</div>
               <div>API Finnhub: {isConfigured ? "Configurata" : "Non configurata"}</div>
               <div>Aggiornamenti: {isActive ? "Attivi" : "Inattivi"}</div>
-              {mode === "offline" && (
+              {!isConfigured && (
                 <div className="text-xs text-slate-500 dark:text-slate-400">
-                  Uso dati simulati localmente
-                </div>
-              )}
-              {!isOnline && (
-                <div className="text-xs text-slate-500 dark:text-slate-400">
-                  Connessione internet non disponibile
+                  Dati simulati localmente
                 </div>
               )}
               {lastUpdate > 0 && (
@@ -115,7 +90,7 @@ export function RealTimeStatus({ lastUpdate, onManualRefresh }: RealTimeStatusPr
                   <span>Ultimo: {formatTimeSince(timeSinceUpdate)}</span>
                 </div>
               )}
-              {isConfigured && isOnline && (
+              {isConfigured && (
                 <div className="text-xs text-slate-500 dark:text-slate-400">
                   Aggiornamenti in tempo reale
                 </div>

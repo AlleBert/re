@@ -1,0 +1,34 @@
+{
+  "name": "investment-portfolio-manager",
+  "version": "1.0.0",
+  "description": "Investment Portfolio Manager per Windows - Funziona offline",
+  "main": "server/index.js",
+  "scripts": {
+    "install-deps": "npm install",
+    "start": "npm run dev",
+    "dev": "NODE_ENV=development tsx server/index.ts",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node18 --outfile=dist/server.js --external:tsx",
+    "serve": "node dist/server.js"
+  },
+  "offline_features": {
+    "description": "L'applicazione funziona completamente offline",
+    "features": [
+      "Portfolio management completo",
+      "Dati simulati realistici per 20+ azioni",
+      "Mercati USA, Europa, Italia",
+      "Criptovalute (BTC, ETH)",
+      "ETF popolari",
+      "Aggiornamenti prezzi simulati",
+      "Modalità scura/chiara",
+      "Responsive design"
+    ]
+  },
+  "windows_requirements": {
+    "nodejs": "18.0.0",
+    "memory": "512MB",
+    "disk_space": "100MB",
+    "browser": "Chrome, Firefox, Safari, Edge"
+  }
+}

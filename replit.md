@@ -62,11 +62,14 @@ Preferred communication style: Simple, everyday language.
 - **Date-fns**: Date manipulation utilities
 
 ### Financial Data Integration
-- **Alpha Vantage API**: Real-time stock market data (500 requests/day free tier)
-- **Yahoo Finance API**: Unofficial but comprehensive market data access
-- **Finnhub API**: Professional-grade financial data with real-time quotes
-- **Financial Modeling Prep**: Fundamental analysis and financial statements
+- **Primary Source**: Finnhub API for professional-grade financial data with real-time quotes
 - **Multiple Provider Fallback**: Automatic failover between data sources for reliability
+- **Offline Mode**: Complete offline functionality with simulated realistic market data
+  - 20+ pre-loaded stocks (USA, Europe, Italy)
+  - Cryptocurrencies (BTC, ETH)
+  - Popular ETFs (SPY, QQQ, VTI)
+  - Dynamic price simulation with realistic market movements
+  - Automatic online/offline detection and switching
 
 ### Backend (Ready for Extension)
 - **Express.js**: Web server framework

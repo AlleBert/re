@@ -4,7 +4,6 @@ import { storage } from "./storage";
 import { getClientConfig, config } from "./config";
 import { serverFinnhubService } from "./finnhub";
 import { multiProviderService } from "./multiProvider";
-import { offlineDataService } from "./offlineData";
 import { insertInvestmentSchema, insertTransactionSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -13,7 +12,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(getClientConfig());
   });
 
-  // Finnhub API proxy routes with enhanced ETF search and offline fallback
+  // Finnhub API proxy routes with enhanced ETF search
   app.get("/api/finnhub/search", async (req, res) => {
     try {
       const query = req.query.q as string;
@@ -21,27 +20,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Query parameter required" });
       }
       
-      // Check if online first
-      const isOnline = await offlineDataService.isOnline();
-      
-      if (!isOnline) {
-        console.log(`Offline mode: Using local data for search "${query}"`);
-        const results = offlineDataService.searchSymbolOffline(query);
-        res.json(results);
-        return;
-      }
-      
-      // Try online search
       const results = await serverFinnhubService.searchSymbol(query);
       console.log(`Search for "${query}" returned ${results.length} results:`, results.map(r => `${r.symbol} (${r.type})`));
       
       res.json(results);
     } catch (error) {
-      console.error("Finnhub search error, falling back to offline:", error);
-      // Fallback to offline search
-      const query = req.query.q as string;
-      const results = offlineDataService.searchSymbolOffline(query);
-      res.json(results);
+      console.error("Finnhub search error:", error);
+      res.status(500).json({ error: "Search failed" });
     }
   });
 
@@ -52,29 +37,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Symbol parameter required" });
       }
       
-      // Check if online first
-      const isOnline = await offlineDataService.isOnline();
-      
-      if (!isOnline) {
-        console.log(`Offline mode: Using local data for quote ${symbol}`);
-        const quote = offlineDataService.getQuoteOffline(symbol);
-        if (!quote) {
-          return res.status(404).json({ error: "Quote not found in offline data" });
-        }
-        res.json({ ...quote, provider: "Offline Data" });
-        return;
-      }
-      
-      // Try online providers
+      // Use multi-provider service for better European market coverage
       const quote = await multiProviderService.getQuote(symbol);
       if (!quote) {
-        // Fallback to offline data
-        console.log(`No online quote found for ${symbol}, falling back to offline data`);
-        const offlineQuote = offlineDataService.getQuoteOffline(symbol);
-        if (offlineQuote) {
-          res.json({ ...offlineQuote, provider: "Offline Data" });
-          return;
-        }
         return res.status(404).json({ error: "Quote not found from any provider" });
       }
       
@@ -85,15 +50,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(quote);
     } catch (error) {
-      console.error("Multi-provider quote error, trying offline:", error);
-      // Fallback to offline data
-      const symbol = req.params.symbol;
-      const offlineQuote = offlineDataService.getQuoteOffline(symbol);
-      if (offlineQuote) {
-        res.json({ ...offlineQuote, provider: "Offline Data" });
-      } else {
-        res.status(500).json({ error: "Quote fetch failed from all providers" });
-      }
+      console.error("Multi-provider quote error:", error);
+      res.status(500).json({ error: "Quote fetch failed from all providers" });
     }
   });
 
@@ -111,13 +69,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/finnhub/status", async (req, res) => {
-    const isOnline = await offlineDataService.isOnline();
-    res.json({ 
-      configured: serverFinnhubService.isConfigured(),
-      online: isOnline,
-      mode: isOnline ? "online" : "offline"
-    });
+  app.get("/api/finnhub/status", (req, res) => {
+    res.json({ configured: serverFinnhubService.isConfigured() });
   });
 
   // ISIN lookup endpoint
